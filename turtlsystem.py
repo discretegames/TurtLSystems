@@ -1,11 +1,11 @@
 """An implementation of Lindenmayer systems in Python with turtle graphics."""
 
 from typing import List
-
 import turtle
+from defaults import *
 
-
-WAS_SETUP = False
+IS_SETUP = False
+IS_DONE = False
 
 # todo have defaults up here as we can?
 
@@ -15,9 +15,9 @@ def get(value, default=None):
 
 
 def setup(title="TurtLSystems", window_size=(0.75, 0.75), background_color=(0, 0, 0), background_image=None,
-          canvas_size=(None, None), window_position=(None, None), delay=0, color_mode=255, mode="standard"):
+          canvas_size=(None, None), window_position=(None, None), delay=0, mode='standard'):
+    turtle.colormode(255)
     turtle.title(str(get(title, "TurtLSystems")))
-    turtle.colormode(get(color_mode, 255))
     turtle.mode(get(mode, "standard"))
     turtle.delay(get(delay, 0))
     window_w, window_h = get(window_size, (0.75, 0.75))
@@ -27,14 +27,13 @@ def setup(title="TurtLSystems", window_size=(0.75, 0.75), background_color=(0, 0
     turtle.screensize(canvas_w, canvas_h)
     turtle.bgcolor(get(background_color, (0, 0, 0)))
     turtle.bgpic(background_image)
-    global WAS_SETUP
-    WAS_SETUP = True
-# todo starting example with just draw()? sure, so defaults for start, rule, import from examples
+    global IS_SETUP
+    IS_SETUP = True
 # todo draws_per_frame, png_out/pad, gif_out/pad
 
 
-def expand_lsystem(start, rules, level):
-    for _ in range(level):
+def expand_lsystem(start, rules, n):
+    for _ in range(n):
         start = ''.join(rules.get(c, c) for c in start)
     return start
 
@@ -45,7 +44,7 @@ def parse_rules(rules):
     elif isinstance(rules, str):
         r = rules.split()
         rules = {inp: out for inp, out in zip(r[::2], r[1::2])}
-    return rules  # todo maybe warn here about invalid rules
+    return rules
 
 
 def make_color_list(color, fill_color, colors):
@@ -64,13 +63,12 @@ def make_color_list(color, fill_color, colors):
             (128, 128, 128),
             (255, 255, 255)
         ]
-        if turtle.colormode() == 1.0:  # TODO map colors to tuples
-            defaults = [(r/255.0, g/255.0, b/255.0) for r, g, b in defaults]
-        colors = colors + defaults[len(colors):]
+        colors = list(map(tuple, colors))
+        colors.extend(defaults[len(colors):])
         if color is not None:
-            colors[0] = color
+            colors[0] = tuple(color)
         if fill_color is not None:
-            colors[1] = fill_color
+            colors[1] = tuple(fill_color)
     return colors
 
 
@@ -100,34 +98,30 @@ class State:
         self.change_fill = change_fill
 
 
-# todo remove colormode 1.0, only support 255, no names
-# todo tuples for all colors? yeah, should do that YES
 def run(t: turtle.Turtle, string, colors, angle, length, thickness, angle_increment,
         length_increment, length_scalar, thickness_increment, color_increments, full_circle):
     initial_angle, initial_length = angle, length
     swap_signs, change_fill = False, False
-    pen_color, fill_color = list(colors[0]), list(colors[1])
+    pen_color, fill_color = colors[0], colors[1]
     t.pencolor(pen_color)
     t.fillcolor(fill_color)
     stack: List[State] = []
 
-    def set_color(color=None):
+    def set_color(color):
         nonlocal pen_color, fill_color, change_fill
         if change_fill:
             change_fill = False
-            if color:
-                fill_color = list(color)
+            fill_color = color
             t.fillcolor(fill_color)
         else:
-            if color:
-                pen_color = list(color)
+            pen_color = color
             t.pencolor(pen_color)
 
     def increment_color(channel, decrement=False):
-        color = fill_color if change_fill else pen_color
+        color = list(fill_color if change_fill else pen_color)
         amount = (1 if decrement else -1) * color_increments[channel]
         color[channel] = max(0, min(color[channel] + amount, 255))
-        set_color()
+        set_color(tuple(color))
 
     for c in string:
         # Length:
@@ -158,20 +152,20 @@ def run(t: turtle.Turtle, string, colors, angle, length, thickness, angle_increm
             t.right(full_circle/2.0)
         elif c == '~':
             angle = initial_angle
-        elif c == '>':
+        elif c == ')':
             angle += angle_increment
-        elif c == '<':
+        elif c == '(':
             angle -= angle_increment
         # Thickness:
         elif c == '=':
             t.pensize(thickness)
-        elif c == ')':
+        elif c == '>':
             t.pensize(max(1, thickness + thickness_increment))
-        elif c == '(':
+        elif c == '<':
             t.pensize(max(1, thickness - thickness_increment))
         # Color:
         elif '0' <= c <= '9':
-            set_color(c)
+            set_color(colors[int(c)])
         elif c == '#':
             change_fill = True
         elif c == ',':
@@ -203,30 +197,29 @@ def run(t: turtle.Turtle, string, colors, angle, length, thickness, angle_increm
                 s = stack.pop()
                 orient(t, s.position, s.heading)
                 angle, length = s.angle, s.length
-                pen_color, fill_color = s.pen_color, s.fill_color
                 swap_signs, change_fill = s.swap_signs, s.change_fill
+                pen_color, fill_color = s.pen_color, s.fill_color
         elif c == '$':
             break
 
 
 # todo? get-ify all these? probably, watch out for colors and rules
-def draw(start="F", rules=None, level=4, angle=90, length=20, thickness=1, color=(255, 0, 0),
-         fill_color=(255, 128, 0), background_color=(0, 0, 0), *, colors=None, last=True,
+def draw(start='F', rules='F ,F+F-F-F+F', n=4, angle=90, length=10, thickness=1, color=(255, 0, 0),
+         fill_color=(255, 128, 0), background_color=(0, 0, 0), *, colors=None,
          angle_increment=15, length_increment=5, length_scalar=2, thickness_increment=1,
-         red_increment=8, green_increment=8, blue_increment=8, position=(0, 0), heading=0,
-         instant=False, speed=0, show_turtle=False, turtle_shape="classic", full_circle=360.0):
-    if not WAS_SETUP:
+         red_increment=4, green_increment=4, blue_increment=4, position=(0, 0), heading=0,
+         speed=0, asap=False, show_turtle=False, turtle_shape='classic', full_circle=360.0, last=True):
+    if not IS_SETUP:
         setup()
 
-    string = expand_lsystem(start, parse_rules(rules), level)
-    colors = make_color_list(color, fill_color, colors)
-
+    turtle.colormode(255)
     turtle.bgcolor(background_color)
-    if instant:
+    if asap:
         saved_tracer, saved_delay = turtle.tracer(), turtle.delay()
         turtle.tracer(0, 0)
 
     t = turtle.Turtle()
+    t.speed(speed)
     t.degrees(full_circle)
     t.shape(turtle_shape)
     if show_turtle:
@@ -234,21 +227,29 @@ def draw(start="F", rules=None, level=4, angle=90, length=20, thickness=1, color
     else:
         t.hideturtle()
     orient(t, position, heading)
+
+    string = expand_lsystem(start, parse_rules(rules), n)
+    colors = make_color_list(color, fill_color, colors)
     run(t, string, colors, angle, length, thickness, angle_increment, length_increment, length_scalar,
         thickness_increment, (red_increment, green_increment, blue_increment), full_circle)
 
-    if instant:
+    if asap:
         turtle.tracer(saved_tracer, saved_delay)
         turtle.update()
-    if last:
+    if last and not IS_DONE:
         turtle.done()
 
-    return tuple(t.position()), t.heading()
+    return string, tuple(t.position()), t.heading()
 
 
-def done():
-    turtle.done()
+def finish():
+    global IS_DONE
+    if not IS_DONE:
+        IS_DONE = True
+        turtle.done()
 
 
-# print(draw("F", {'F': 'F+F-F-F+F'}, angle=45, instant=True, last=False))
-draw("FF4|FFF")
+# print(draw("F", {'F': 'F+F-F-F+F'}, angle=90, instant=True, last=False))
+
+
+draw(red_increment=1, n=4, asap=True, speed=1)
