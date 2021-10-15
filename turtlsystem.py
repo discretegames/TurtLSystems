@@ -3,6 +3,8 @@
 import turtle
 
 
+# todo have defaults up here as we can?
+
 def get(value, default=None):
     return default if value is None else value
 
@@ -40,9 +42,27 @@ def parse_rules(rules):
 def make_color_list(color, fill_color, colors):
     if colors is None:
         colors = []
-    if color is None:
-        pass
-    # TODO
+    if len(colors) < 10:
+        defaults = [
+            (255, 0, 0),
+            (255, 128, 0),
+            (255, 255, 0),
+            (0, 255, 0),
+            (0, 255, 255),
+            (0, 0, 255),
+            (128, 0, 255),
+            (255, 0, 255),
+            (128, 128, 128),
+            (255, 255, 255)
+        ]
+        if turtle.colormode() == 1.0:
+            defaults = [(r/255, g/255, b/255) for r, g, b in defaults]
+        colors = colors + defaults[len(colors):]
+        if color is not None:
+            colors[0] = color
+        if fill_color is not None:
+            colors[1] = fill_color
+    return colors
 
 
 def run(t, string, colors, angle, length, thickness, angle_increment, length_increment, length_scalar,
@@ -51,8 +71,8 @@ def run(t, string, colors, angle, length, thickness, angle_increment, length_inc
 
 
 # todo? get-ify all these?
-def draw(start, rules, level=4, angle=90, length=20, thickness=1, color=(255, 0, 0),
-         fill_color=(255, 255, 0), background_color=(0, 0, 0), *, colors=None,
+def draw(start, rules, level=4, angle=90, length=20, thickness=1, color=(255, 255, 255),
+         fill_color=(128, 128, 128), background_color=(0, 0, 0), *, colors=None,
          angle_increment=15, length_increment=5, length_scalar=2, thickness_increment=1,
          red_increment=8, green_increment=8, blue_increment=8, position=(0, 0), heading=0,
          instant=False, speed=10, show_turtle=False, turtle_shape="classic", full_circle=360.0):
@@ -79,8 +99,8 @@ def draw(start, rules, level=4, angle=90, length=20, thickness=1, color=(255, 0,
     t.speed(0)
     t.setposition(position)
     t.setheading(heading)
-    t.pendown()
     t.speed(speed)
+    t.pendown()
 
     run(t, string, colors, angle, length, thickness, angle_increment, length_increment,
         length_scalar, thickness_increment, red_increment, green_increment, blue_increment)
