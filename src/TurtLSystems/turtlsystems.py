@@ -1,13 +1,11 @@
-"""An implementation of Lindenmayer systems in Python with turtle graphics."""
+"""The core code of the TurtLSystems Python 3 package (https://pypi.org/project/TurtLSystems)."""
 
-from typing import Optional, Dict, List, Iterable, Tuple, Union
+from typing import List, Dict, Tuple, Iterable, Optional, Union
 import turtle
 
 IS_SETUP = False
-IS_FINISHED = False
-
-
-default_colors = (
+IS_DONE = False
+DEFAULT_COLORS = (
     (255, 255, 255),
     (128, 128, 128),
     (255, 0, 0),
@@ -21,27 +19,19 @@ default_colors = (
 )
 
 
-def finish() -> None:
-    """TODO docstring"""
-    global IS_FINISHED  # pylint: disable=global-statement
-    if not IS_FINISHED:
-        IS_FINISHED = True
-        turtle.done()
-
-
-def parse_rules(rules: Union[str, Dict[str, str]]) -> Dict[str, str]:
-    """TODO docstring"""
+def make_rules(rules: Union[str, Dict[str, str]]) -> Dict[str, str]:
+    """Creates rules dict."""
     if isinstance(rules, str):
         split = rules.split()
         rules = {inp: out for inp, out in zip(split[::2], split[1::2])}
     return rules
 
 
-def make_colors(color: Tuple[int, int, int], fill_color: Tuple[int, int, int],
+def make_colors(color: Optional[Tuple[int, int, int]], fill_color: Optional[Tuple[int, int, int]],
                 colors: Iterable[Tuple[int, int, int]]) -> List[Tuple[int, int, int]]:
-    """TODO docstring"""
+    """Creates colors list based on `colors`, inserting `color` at index 0 and `fill_color` at index 1 if given."""
     colors = list(map(tuple, colors))  # type: ignore
-    colors.extend(default_colors[len(colors):])
+    colors.extend(DEFAULT_COLORS[len(colors):])
     if color is not None:
         colors[0] = tuple(color)  # type: ignore
     if fill_color is not None:
@@ -49,27 +39,35 @@ def make_colors(color: Tuple[int, int, int], fill_color: Tuple[int, int, int],
     return colors
 
 
-def orient_silently(turt: turtle.Turtle, position: Tuple[float, float], heading: float) -> None:
-    """TODO docstring"""
-    speed = turt.speed()
-    down = turt.isdown()
-    turt.penup()
-    turt.speed(0)
-    turt.setposition(position)
-    turt.setheading(heading)
-    turt.speed(speed)
+def orient(t: turtle.Turtle, position: Tuple[float, float], heading: float) -> None:  # pylint: disable=invalid-name
+    """Silently orients turtle `t` to given `position` and `heading`."""
+    speed = t.speed()
+    down = t.isdown()
+    t.penup()
+    t.speed(0)
+    t.setposition(position)
+    t.setheading(heading)
+    t.speed(speed)
     if down:
-        turt.pendown()
+        t.pendown()
 
 
-def expand_lsystem(start: str, rules: Dict[str, str], level: int) -> str:
-    """TODO docstring"""
+def lsystem(start: str, rules: Dict[str, str], level: int) -> str:
+    """Iterates L-system initialzed to `start` based on `rules` `level` number of times."""
     for _ in range(level):
         start = ''.join(rules.get(c, c) for c in start)
     return start
 
 
-def setup(title: str = "TurtLSystems",
+def done() -> None:
+    """Finalize TurtLSystems drawing. Only needed if all calls to `draw` specified `last=False`."""
+    global IS_DONE  # pylint: disable=global-statement
+    if not IS_DONE:
+        IS_DONE = True
+        turtle.done()
+
+
+def setup(title: str = "TurtLSystems",  # pylint: disable=too-many-arguments
           window_size: Tuple[Union[int, float], Union[int, float]] = (0.75, 0.75),
           background_color: Tuple[int, int, int] = (0, 0, 0),
           background_image: Optional[str] = None,
@@ -129,7 +127,7 @@ def run(t: turtle.Turtle,  # pylint: disable=invalid-name,too-many-locals,too-ma
         length_scalar: float,
         thickness_increment: int,
         color_increments: Tuple[int, int, int]) -> None:
-    """TODO docstring"""
+    """Run turtle `t` on L-system string `string` with given options."""
     initial_angle, initial_length = angle, length
     swap_signs, modify_fill = False, False
     pen_color, fill_color = colors[0], colors[1]
@@ -225,7 +223,7 @@ def run(t: turtle.Turtle,  # pylint: disable=invalid-name,too-many-locals,too-ma
         elif c == ']':
             if stack:
                 state = stack.pop()
-                orient_silently(t, state.position, state.heading)
+                orient(t, state.position, state.heading)
                 angle, length = state.angle, state.length
                 swap_signs, modify_fill = state.swap_signs, state.change_fill
                 pen_color, fill_color = state.pen_color, state.fill_color
@@ -239,10 +237,10 @@ def draw(start: str = 'F',  # pylint: disable=too-many-locals,too-many-arguments
          angle: float = 90,
          length: float = 10,
          thickness: int = 1,
-         color: Tuple[int, int, int] = (255, 0, 0),
-         fill_color: Tuple[int, int, int] = (255, 255, 255),
+         color: Optional[Tuple[int, int, int]] = (255, 255, 255),
+         fill_color: Optional[Tuple[int, int, int]] = (128, 128, 128),
          background_color: Tuple[int, int, int] = (0, 0, 0), *,
-         colors: Iterable[Tuple[int, int, int]] = default_colors,
+         colors: Iterable[Tuple[int, int, int]] = DEFAULT_COLORS,
          angle_increment: float = 15,
          length_increment: float = 5,
          length_scalar: float = 2,
@@ -254,6 +252,8 @@ def draw(start: str = 'F',  # pylint: disable=too-many-locals,too-many-arguments
          heading: float = 0,
          speed: Union[int, str] = 0,
          asap: bool = False,
+         prefix: str = '',
+         suffix: str = '',
          show_turtle: bool = False,
          turtle_shape: str = 'classic',
          full_circle: float = 360,
@@ -276,12 +276,14 @@ def draw(start: str = 'F',  # pylint: disable=too-many-locals,too-many-arguments
         t.showturtle()
     else:
         t.hideturtle()
-    orient_silently(t, position, heading)
+    orient(t, position, heading)
 
-    string = expand_lsystem(start, parse_rules(rules), level)
+    string = prefix + lsystem(start, make_rules(rules), level) + suffix
     colors = make_colors(color, fill_color, colors)
 
-    run(t, string, colors=colors, full_circle=full_circle,
+    run(t, string,
+        colors=colors,
+        full_circle=full_circle,
         angle=angle,
         length=length,
         thickness=thickness,
@@ -295,6 +297,10 @@ def draw(start: str = 'F',  # pylint: disable=too-many-locals,too-many-arguments
         turtle.tracer(saved_tracer, saved_delay)
         turtle.update()
     if last:
-        finish()
+        done()
 
     return string, (t.xcor(), t.ycor()), t.heading()
+
+
+if __name__ == '__main__':
+    draw()
