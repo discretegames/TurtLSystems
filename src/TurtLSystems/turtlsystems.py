@@ -61,6 +61,8 @@ def lsystem(start: str, rules: Dict[str, str], level: int) -> str:
 
 def done() -> None:
     """Finalize TurtLSystems drawing. Only needed if all calls to `draw` specified `last=False`."""
+    if not IS_SETUP:
+        setup()
     global IS_DONE  # pylint: disable=global-statement
     if not IS_DONE:
         IS_DONE = True
@@ -71,7 +73,7 @@ def setup(title: str = "TurtLSystems",  # pylint: disable=too-many-arguments
           window_size: Tuple[Union[int, float], Union[int, float]] = (0.75, 0.75),
           background_color: Tuple[int, int, int] = (0, 0, 0),
           background_image: Optional[str] = None,
-          canvas_size: Tuple[Optional[int], Optional[int]] = (None, None),
+          canvas_size: Tuple[Optional[int], Optional[int]] = (None, None),  # TODO fix up
           window_position: Tuple[Optional[int], Optional[int]] = (None, None),
           delay: int = 0,
           mode: str = 'standard') -> None:
@@ -303,4 +305,33 @@ def draw(start: str = 'F',  # pylint: disable=too-many-locals,too-many-arguments
 
 
 if __name__ == '__main__':
-    draw()
+    # setup(window_size=(1000 + 8, 300 + 8), canvas_size=(100, 100))
+    # import time
+    # time.sleep(1)
+    # turtle.right(90)
+    # turtle.color(255, 255, 128)
+    # turtle.fd(1000)
+    # import tkinter  # deiconify to shoe
+
+    # canvas = turtle.getcanvas()
+    # root: tkinter.Tk = turtle.Screen()._root  # type: ignore # pylint: disable=protected-access
+    # print(canvas.canvasx(0), root.winfo_x())
+    # x, y = root.winfo_x() + 12, root.winfo_y() + 35
+    # w, h = root.winfo_width() - 8, root.winfo_height() - 8
+    # print(root.winfo_vrootwidth(), root.winfo_width())
+    # print(root.winfo_vrootx(), root.winfo_x())
+    # from pyautogui import screenshot  # type: ignore
+    # screenshot('out.png', region=(x, y, w, h))
+    # print('done')
+    # done()
+    setup(window_size=(808, 608))
+    draw(last=False, color=(160, 100, 0))
+    canvas = turtle.getcanvas()
+    # print(type(canvas))
+    canvas.postscript(file='out.eps')  # works for ps, needs to happen before done
+    import subprocess
+    done()
+    subprocess.run(
+        '''gswin64c -dSAFER -dBATCH -dNOPAUSE -dEPSCrop -r96 -sDEVICE=pngalpha -dGraphicsAlphaBits=1 -dTextAlphaBits=4 -sOutputFile=output.png out.eps''')
+    # -g800x600
+    #
