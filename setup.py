@@ -1,10 +1,10 @@
-"""Package setup file for the Python 3 TurtLSystems package: https://pypi.org/project/TurtLSystems"""
+"""Package setup file for TurtLSystems Python 3 package (https://pypi.org/project/TurtLSystems)."""
 
 from setuptools import setup, find_packages
 
-version = "0.0.1"
+VERSION = "0.0.2"
 
-setup(name='TurtLSystems', version=version, author='discretegames',
+setup(name='TurtLSystems', version=VERSION, author='discretegames',
       url='https://github.com/discretegames/TurtLSystems',
       packages=find_packages('src'),
       package_dir={'': 'src'})

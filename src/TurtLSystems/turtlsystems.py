@@ -29,7 +29,7 @@ def make_rules(rules: Union[str, Dict[str, str]]) -> Dict[str, str]:
 
 def make_colors(color: Optional[Tuple[int, int, int]], fill_color: Optional[Tuple[int, int, int]],
                 colors: Iterable[Tuple[int, int, int]]) -> List[Tuple[int, int, int]]:
-    """Creates colors list based on `colors`, inserting `color` at index 0 and `fill_color` at index 1 if given."""
+    """Creates colors list."""
     colors = list(map(tuple, colors))  # type: ignore
     colors.extend(DEFAULT_COLORS[len(colors):])
     if color is not None:
