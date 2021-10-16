@@ -1,4 +1,8 @@
-class Default:
+"""TODO docstring"""
+
+
+class Default:  # pylint: disable=too-few-public-methods
+    """TODO docstring"""
     title = "TurtLSystems"
     window_size = 0.75, 0.75
     window_position = None, None

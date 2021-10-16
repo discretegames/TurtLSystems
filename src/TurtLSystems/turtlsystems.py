@@ -1,26 +1,72 @@
 """An implementation of Lindenmayer systems in Python with turtle graphics."""
 
-from typing import List
+from typing import Any, Dict, List, Tuple, Union, Optional, cast
 import turtle
-from defaults import Default
+from TurtLSystems.defaults import Default
 
 IS_SETUP = False
 IS_FINISHED = False
 
 
-def get(value, default):
+def get(value: Any, default: Any) -> Any:
+    """Returns default if value is None."""
     return default if value is None else value
 
 
-def finish():
-    global IS_FINISHED
+def finish() -> None:
+    """TODO docstring"""
+    global IS_FINISHED  # pylint: disable=global-statement
     if not IS_FINISHED:
         IS_FINISHED = True
         turtle.done()
 
 
-def setup(title="TurtLSystems", window_size=(0.75, 0.75), background_color=(0, 0, 0), background_image=None,
-          canvas_size=(None, None), window_position=(None, None), delay=0, mode='standard'):
+def parse_rules(rules: Union[str, Dict[str, str]]) -> Dict[str, str]:
+    """TODO docstring"""
+    if isinstance(rules, str):
+        split = rules.split()
+        rules = {inp: out for inp, out in zip(split[::2], split[1::2])}
+    return rules
+
+
+def make_colors(color: Tuple[int, int, int], fill_color: Tuple[int, int, int],
+                colors: List[Tuple[int, int, int]]) -> List[Tuple[int, int, int]]:
+    """TODO docstring"""
+    colors = list(map(tuple, colors))  # type: ignore
+    colors.extend(Default.colors[len(colors):])
+    if color is not None:
+        colors[0] = cast(Tuple[int, int, int], tuple(color))
+    if fill_color is not None:
+        colors[1] = cast(Tuple[int, int, int], tuple(fill_color))
+    return colors
+
+
+def orient_silently(turt: turtle.Turtle, position: Tuple[float, float], heading: float) -> None:
+    """TODO docstring"""
+    speed = turt.speed()
+    down = turt.isdown()
+    turt.penup()
+    turt.speed(0)
+    turt.setposition(position)
+    turt.setheading(heading)
+    turt.speed(speed)
+    if down:
+        turt.pendown()
+
+
+def expand_lsystem(start: str, rules: Dict[str, str], n: int) -> str:
+    """TODO docstring"""
+    for _ in range(n):
+        start = ''.join(rules.get(c, c) for c in start)
+    return start
+
+
+def setup(
+        title: Optional[str] = "TurtLSystems",
+        window_size: Optional[Tuple[Union[int, float], Union[int, float]]] = (0.75, 0.75),
+        background_color: Optional[Tuple[int, int, int]] = (0, 0, 0),
+        background_image=None, canvas_size=(None, None), window_position=(None, None), delay=0, mode='standard'):
+    """TODO docstring"""
     turtle.colormode(255)
     turtle.title(str(get(title, Default.title)))
     turtle.mode(get(mode, Default.mode))
@@ -32,47 +78,14 @@ def setup(title="TurtLSystems", window_size=(0.75, 0.75), background_color=(0, 0
     turtle.screensize(canvas_w, canvas_h)
     turtle.bgcolor(get(background_color, Default.background_color))
     turtle.bgpic(get(background_image, Default.background_image))
-    global IS_SETUP
+    global IS_SETUP  # pylint: disable=global-statement
     IS_SETUP = True
-# todo draws_per_frame, png_out/pad, gif_out/pad
-
-
-def parse_rules(rules):
-    if isinstance(rules, str):
-        r = rules.split()
-        rules = {inp: out for inp, out in zip(r[::2], r[1::2])}
-    return rules
-
-
-def make_colors(color, fill_color, colors):
-    colors = list(map(tuple, colors))
-    colors.extend(Default.colors[len(colors):])
-    if color is not None:
-        colors[0] = tuple(color)
-    if fill_color is not None:
-        colors[1] = tuple(fill_color)
-    return colors
-
-
-def orient(t: turtle.Turtle, position, heading):
-    speed = t.speed()
-    down = t.isdown()
-    t.penup()
-    t.speed(0)
-    t.setposition(position)
-    t.setheading(heading)
-    t.speed(speed)
-    if down:
-        t.pendown()
-
-
-def expand_lsystem(start, rules, n):
-    for _ in range(n):
-        start = ''.join(rules.get(c, c) for c in start)
-    return start
 
 
 class State:
+    """TODO Docstring"""
+    # pylint: disable=too-many-arguments
+
     def __init__(self, position, heading, angle, length, thickness, pen_color, fill_color,
                  swap_signs, change_fill):
         self.position = tuple(position)
@@ -183,13 +196,15 @@ def run(t: turtle.Turtle, string, *, colors, full_circle, angle, length, thickne
         elif c == ']':
             if stack:
                 s = stack.pop()
-                orient(t, s.position, s.heading)
+                orient_silently(t, s.position, s.heading)
                 angle, length = s.angle, s.length
                 swap_signs, change_fill = s.swap_signs, s.change_fill
                 pen_color, fill_color = s.pen_color, s.fill_color
         elif c == '$':
             break
 
+
+#  todo draws_per_frame, png_out/pad, gif_out/pad
 
 def draw(start='F', rules='F F+F-F-F+F', n=4, angle=90, length=10, thickness=1, color=(255, 0, 0),
          fill_color=(255, 128, 0), background_color=(0, 0, 0), *, colors=None,
@@ -215,7 +230,7 @@ def draw(start='F', rules='F F+F-F-F+F', n=4, angle=90, length=10, thickness=1, 
         t.showturtle()
     else:
         t.hideturtle()
-    orient(t, get(position, Default.position), get(heading, Default.heading))
+    orient_silently(t, get(position, Default.position), get(heading, Default.heading))
 
     rules = parse_rules(get(rules, Default.rules))
     string = expand_lsystem(get(start, Default.start), rules, get(n, Default.n))
