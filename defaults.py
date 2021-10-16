@@ -1,6 +1,3 @@
-from turtle import heading, position, showturtle
-
-
 class Default:
     title = "TurtLSystems"
     window_size = 0.75, 0.75
@@ -10,16 +7,15 @@ class Default:
     background_image = None
     delay = 0
     mode = 'standard'
-    start = 'F'
-    rules = 'F F+F-F-F+F'
+    start = ''
+    rules = ''
     n = 4
     angle = 90
     length = 10
     thickness = 1
-    color = 255, 0, 0
-    fill_color = 255, 128, 0
-    colors = None
-    colors_list = [
+    color = None
+    fill_color = None
+    colors = [
         (255, 0, 0),
         (255, 128, 0),
         (255, 255, 0),
