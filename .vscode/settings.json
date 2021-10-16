@@ -1,6 +1,17 @@
 {
 	"files.exclude": {
+		".coverage": true,
+		"desktop.ini": true,
+		".pytest_cache/": true,
+		".mypy_cache/": true,
 		"**/__pycache__/": true,
+		"**/*.egg-info/": true,
+		"**/.eggs/": true,
+		".tox/": true,
+		"htmlcov/": true,
+		".github": true,
+		"venv": false,
+		"LICENSE.txt": true
 	},
 	"cSpell.words": [
 		"bgpic",

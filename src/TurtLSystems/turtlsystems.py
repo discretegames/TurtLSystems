@@ -240,7 +240,3 @@ def draw(start='F', rules='F F+F-F-F+F', n=4, angle=90, length=10, thickness=1, 
         finish()
 
     return string, tuple(t.position()), t.heading()
-
-
-# print(draw("F", {'F': 'F+F-F-F+F'}, angle=90, instant=True, last=False))
-# draw(red_increment=1, n=4, asap=True, speed=1)
