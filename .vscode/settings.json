@@ -20,9 +20,11 @@
 		"isdown",
 		"penup",
 		"Turt",
-		"turtlsystems"
+		"turtlsystems",
+		"xcor",
+		"ycor"
 	],
-	"python.analysis.diagnosticMode": "workspace", // Set to "workspace" to reveal problems everywhere.
+	"python.analysis.diagnosticMode": "openFilesOnly", // Set to "workspace" to reveal problems everywhere.
 	"python.linting.enabled": true,
 	"python.linting.lintOnSave": true,
 	"python.linting.mypyEnabled": true,

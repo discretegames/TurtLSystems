@@ -1,16 +1,24 @@
 """An implementation of Lindenmayer systems in Python with turtle graphics."""
 
-from typing import Any, Dict, List, Tuple, Union, Optional, cast
+from typing import Optional, Dict, List, Iterable, Tuple, Union
 import turtle
-from TurtLSystems.defaults import Default
 
 IS_SETUP = False
 IS_FINISHED = False
 
 
-def get(value: Any, default: Any) -> Any:
-    """Returns default if value is None."""
-    return default if value is None else value
+default_colors = (
+    (255, 255, 255),
+    (128, 128, 128),
+    (255, 0, 0),
+    (255, 128, 0),
+    (255, 255, 0),
+    (0, 255, 0),
+    (0, 255, 255),
+    (0, 0, 255),
+    (128, 0, 255),
+    (255, 0, 255),
+)
 
 
 def finish() -> None:
@@ -30,14 +38,14 @@ def parse_rules(rules: Union[str, Dict[str, str]]) -> Dict[str, str]:
 
 
 def make_colors(color: Tuple[int, int, int], fill_color: Tuple[int, int, int],
-                colors: List[Tuple[int, int, int]]) -> List[Tuple[int, int, int]]:
+                colors: Iterable[Tuple[int, int, int]]) -> List[Tuple[int, int, int]]:
     """TODO docstring"""
     colors = list(map(tuple, colors))  # type: ignore
-    colors.extend(Default.colors[len(colors):])
+    colors.extend(default_colors[len(colors):])
     if color is not None:
-        colors[0] = cast(Tuple[int, int, int], tuple(color))
+        colors[0] = tuple(color)  # type: ignore
     if fill_color is not None:
-        colors[1] = cast(Tuple[int, int, int], tuple(fill_color))
+        colors[1] = tuple(fill_color)  # type: ignore
     return colors
 
 
@@ -54,41 +62,51 @@ def orient_silently(turt: turtle.Turtle, position: Tuple[float, float], heading:
         turt.pendown()
 
 
-def expand_lsystem(start: str, rules: Dict[str, str], n: int) -> str:
+def expand_lsystem(start: str, rules: Dict[str, str], level: int) -> str:
     """TODO docstring"""
-    for _ in range(n):
+    for _ in range(level):
         start = ''.join(rules.get(c, c) for c in start)
     return start
 
 
-def setup(
-        title: Optional[str] = "TurtLSystems",
-        window_size: Optional[Tuple[Union[int, float], Union[int, float]]] = (0.75, 0.75),
-        background_color: Optional[Tuple[int, int, int]] = (0, 0, 0),
-        background_image=None, canvas_size=(None, None), window_position=(None, None), delay=0, mode='standard'):
+def setup(title: str = "TurtLSystems",
+          window_size: Tuple[Union[int, float], Union[int, float]] = (0.75, 0.75),
+          background_color: Tuple[int, int, int] = (0, 0, 0),
+          background_image: Optional[str] = None,
+          canvas_size: Tuple[Optional[int], Optional[int]] = (None, None),
+          window_position: Tuple[Optional[int], Optional[int]] = (None, None),
+          delay: int = 0,
+          mode: str = 'standard') -> None:
     """TODO docstring"""
     turtle.colormode(255)
-    turtle.title(str(get(title, Default.title)))
-    turtle.mode(get(mode, Default.mode))
-    turtle.delay(get(delay, Default.delay))
-    window_w, window_h = get(window_size, Default.window_size)
-    window_x, window_y = get(window_position, Default.window_position)
+    turtle.title(title)
+    turtle.mode(mode)
+    turtle.delay(delay)
+    window_w, window_h = window_size
+    window_x, window_y = window_position
     turtle.setup(window_w, window_h, window_x, window_y)
-    canvas_w, canvas_h = get(canvas_size, Default.canvas_size)
-    turtle.screensize(canvas_w, canvas_h)
-    turtle.bgcolor(get(background_color, Default.background_color))
-    turtle.bgpic(get(background_image, Default.background_image))
+    canvas_w, canvas_h = canvas_size
+    turtle.screensize(canvas_w, canvas_h)  # type: ignore
+    turtle.bgcolor(background_color)
+    turtle.bgpic(background_image)
     global IS_SETUP  # pylint: disable=global-statement
     IS_SETUP = True
 
 
-class State:
+class State:  # pylint: disable=too-many-instance-attributes,too-few-public-methods
     """TODO Docstring"""
     # pylint: disable=too-many-arguments
 
-    def __init__(self, position, heading, angle, length, thickness, pen_color, fill_color,
-                 swap_signs, change_fill):
-        self.position = tuple(position)
+    def __init__(self,
+                 position: Tuple[float, float],
+                 heading: float, angle: float,
+                 length: float,
+                 thickness: int,
+                 pen_color: Tuple[int, int, int],
+                 fill_color: Tuple[int, int, int],
+                 swap_signs: bool,
+                 modify_fill: bool) -> None:
+        self.position = position
         self.heading = heading
         self.angle = angle
         self.length = length
@@ -96,35 +114,46 @@ class State:
         self.pen_color = pen_color
         self.fill_color = fill_color
         self.swap_signs = swap_signs
-        self.change_fill = change_fill
+        self.change_fill = modify_fill
 
 
-def run(t: turtle.Turtle, string, *, colors, full_circle, angle, length, thickness, angle_increment,
-        length_increment, length_scalar, thickness_increment, color_increments):
+def run(t: turtle.Turtle,  # pylint: disable=invalid-name,too-many-locals,too-many-branches,too-many-statements
+        string: str, *,
+        colors: List[Tuple[int, int, int]],
+        full_circle: float,
+        angle: float,
+        length: float,
+        thickness: int,
+        angle_increment: float,
+        length_increment: float,
+        length_scalar: float,
+        thickness_increment: int,
+        color_increments: Tuple[int, int, int]) -> None:
+    """TODO docstring"""
     initial_angle, initial_length = angle, length
-    swap_signs, change_fill = False, False
+    swap_signs, modify_fill = False, False
     pen_color, fill_color = colors[0], colors[1]
     t.pencolor(pen_color)
     t.fillcolor(fill_color)
     stack: List[State] = []
 
-    def set_color(color):
-        nonlocal pen_color, fill_color, change_fill
-        if change_fill:
-            change_fill = False
+    def set_color(color: Tuple[int, int, int]) -> None:
+        nonlocal pen_color, fill_color, modify_fill
+        if modify_fill:
+            modify_fill = False
             fill_color = color
             t.fillcolor(fill_color)
         else:
             pen_color = color
             t.pencolor(pen_color)
 
-    def increment_color(channel, decrement=False):
-        color = list(fill_color if change_fill else pen_color)
+    def increment_color(channel: int, decrement: bool = False) -> None:
+        color = list(fill_color if modify_fill else pen_color)
         amount = (1 if decrement else -1) * color_increments[channel]
         color[channel] = max(0, min(color[channel] + amount, 255))
-        set_color(tuple(color))
+        set_color(tuple(color))  # type: ignore
 
-    for c in string:
+    for c in string:  # pylint: disable=invalid-name
         # Length:
         if 'A' <= c <= 'Z':
             t.pendown()
@@ -168,7 +197,7 @@ def run(t: turtle.Turtle, string, *, colors, full_circle, angle, length, thickne
         elif '0' <= c <= '9':
             set_color(colors[int(c)])
         elif c == '#':
-            change_fill = True
+            modify_fill = True
         elif c == ',':
             increment_color(0)
         elif c == '.':
@@ -191,67 +220,81 @@ def run(t: turtle.Turtle, string, *, colors, full_circle, angle, length, thickne
         elif c == '`':
             stack.clear()
         elif c == '[':
-            stack.append(State(t.position(), t.heading(), angle, length, thickness,
-                         pen_color, fill_color, swap_signs, change_fill))
+            stack.append(State((t.xcor(), t.ycor()), t.heading(), angle, length, thickness,
+                         pen_color, fill_color, swap_signs, modify_fill))
         elif c == ']':
             if stack:
-                s = stack.pop()
-                orient_silently(t, s.position, s.heading)
-                angle, length = s.angle, s.length
-                swap_signs, change_fill = s.swap_signs, s.change_fill
-                pen_color, fill_color = s.pen_color, s.fill_color
+                state = stack.pop()
+                orient_silently(t, state.position, state.heading)
+                angle, length = state.angle, state.length
+                swap_signs, modify_fill = state.swap_signs, state.change_fill
+                pen_color, fill_color = state.pen_color, state.fill_color
         elif c == '$':
             break
 
 
-#  todo draws_per_frame, png_out/pad, gif_out/pad
-
-def draw(start='F', rules='F F+F-F-F+F', n=4, angle=90, length=10, thickness=1, color=(255, 0, 0),
-         fill_color=(255, 128, 0), background_color=(0, 0, 0), *, colors=None,
-         angle_increment=15, length_increment=5, length_scalar=2, thickness_increment=1,
-         red_increment=4, green_increment=4, blue_increment=4, position=(0, 0), heading=0,
-         speed=0, asap=False, show_turtle=False, turtle_shape='classic', full_circle=360.0, finish=True):
+def draw(start: str = 'F',  # pylint: disable=too-many-locals,too-many-arguments
+         rules: str = 'F F+F-F-F+F',
+         level: int = 4,
+         angle: float = 90,
+         length: float = 10,
+         thickness: int = 1,
+         color: Tuple[int, int, int] = (255, 0, 0),
+         fill_color: Tuple[int, int, int] = (255, 255, 255),
+         background_color: Tuple[int, int, int] = (0, 0, 0), *,
+         colors: Iterable[Tuple[int, int, int]] = default_colors,
+         angle_increment: float = 15,
+         length_increment: float = 5,
+         length_scalar: float = 2,
+         thickness_increment: int = 1,
+         red_increment: int = 4,
+         green_increment: int = 4,
+         blue_increment: int = 4,
+         position: Tuple[float, float] = (0, 0),
+         heading: float = 0,
+         speed: Union[int, str] = 0,
+         asap: bool = False,
+         show_turtle: bool = False,
+         turtle_shape: str = 'classic',
+         full_circle: float = 360,
+         last: bool = True,) -> Tuple[str, Tuple[float, float], float]:
+    """TODO docstring"""
     if not IS_SETUP:
         setup()
 
     turtle.colormode(255)
-    turtle.bgcolor(get(background_color, Default.background_color))
-    asap = get(asap, Default.asap)
+    turtle.bgcolor(background_color)
     if asap:
         saved_tracer, saved_delay = turtle.tracer(), turtle.delay()
         turtle.tracer(0, 0)
 
-    t = turtle.Turtle()
-    full_circle = get(full_circle, Default.full_circle)
+    t = turtle.Turtle()  # pylint: disable=invalid-name
     t.degrees(full_circle)
-    t.speed(get(speed, Default.speed))
-    t.shape(get(turtle_shape, Default.turtle_shape))
-    if get(show_turtle, Default.show_turtle):
+    t.speed(speed)
+    t.shape(turtle_shape)
+    if show_turtle:
         t.showturtle()
     else:
         t.hideturtle()
-    orient_silently(t, get(position, Default.position), get(heading, Default.heading))
+    orient_silently(t, position, heading)
 
-    rules = parse_rules(get(rules, Default.rules))
-    string = expand_lsystem(get(start, Default.start), rules, get(n, Default.n))
-    colors = make_colors(get(color, Default.color), get(fill_color, Default.fill_color), get(colors, Default.colors))
+    string = expand_lsystem(start, parse_rules(rules), level)
+    colors = make_colors(color, fill_color, colors)
 
     run(t, string, colors=colors, full_circle=full_circle,
-        angle=get(angle, Default.angle),
-        length=get(length, Default.length),
-        thickness=get(thickness, Default.thickness),
-        angle_increment=get(angle_increment, Default.angle_increment),
-        length_increment=get(length_increment, Default.length_increment),
-        length_scalar=get(length_scalar, Default.length_scalar),
-        thickness_increment=get(thickness_increment, Default.thickness_increment),
-        color_increments=(get(red_increment, Default.red_increment),
-                          get(green_increment, Default.green_increment),
-                          get(blue_increment, Default.blue_increment)))
+        angle=angle,
+        length=length,
+        thickness=thickness,
+        angle_increment=angle_increment,
+        length_increment=length_increment,
+        length_scalar=length_scalar,
+        thickness_increment=thickness_increment,
+        color_increments=(red_increment, green_increment, blue_increment))
 
     if asap:
         turtle.tracer(saved_tracer, saved_delay)
         turtle.update()
-    if get(finish, Default.finish):
+    if last:
         finish()
 
-    return string, tuple(t.position()), t.heading()
+    return string, (t.xcor(), t.ycor()), t.heading()
