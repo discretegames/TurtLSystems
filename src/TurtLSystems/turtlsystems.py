@@ -5,11 +5,18 @@ import turtle
 from defaults import Default
 
 IS_SETUP = False
-IS_DONE = False
+IS_FINISHED = False
 
 
 def get(value, default):
     return default if value is None else value
+
+
+def finish():
+    global IS_FINISHED
+    if not IS_FINISHED:
+        IS_FINISHED = True
+        turtle.done()
 
 
 def setup(title="TurtLSystems", window_size=(0.75, 0.75), background_color=(0, 0, 0), background_image=None,
@@ -28,12 +35,6 @@ def setup(title="TurtLSystems", window_size=(0.75, 0.75), background_color=(0, 0
     global IS_SETUP
     IS_SETUP = True
 # todo draws_per_frame, png_out/pad, gif_out/pad
-
-
-def expand_lsystem(start, rules, n):
-    for _ in range(n):
-        start = ''.join(rules.get(c, c) for c in start)
-    return start
 
 
 def parse_rules(rules):
@@ -63,6 +64,12 @@ def orient(t: turtle.Turtle, position, heading):
     t.speed(speed)
     if down:
         t.pendown()
+
+
+def expand_lsystem(start, rules, n):
+    for _ in range(n):
+        start = ''.join(rules.get(c, c) for c in start)
+    return start
 
 
 class State:
@@ -184,12 +191,11 @@ def run(t: turtle.Turtle, string, *, colors, full_circle, angle, length, thickne
             break
 
 
-# todo? get-ify all these? probably, watch out for colors and rules
 def draw(start='F', rules='F F+F-F-F+F', n=4, angle=90, length=10, thickness=1, color=(255, 0, 0),
          fill_color=(255, 128, 0), background_color=(0, 0, 0), *, colors=None,
          angle_increment=15, length_increment=5, length_scalar=2, thickness_increment=1,
          red_increment=4, green_increment=4, blue_increment=4, position=(0, 0), heading=0,
-         speed=0, asap=False, show_turtle=False, turtle_shape='classic', full_circle=360.0, last=True):
+         speed=0, asap=False, show_turtle=False, turtle_shape='classic', full_circle=360.0, finish=True):
     if not IS_SETUP:
         setup()
 
@@ -230,20 +236,11 @@ def draw(start='F', rules='F F+F-F-F+F', n=4, angle=90, length=10, thickness=1, 
     if asap:
         turtle.tracer(saved_tracer, saved_delay)
         turtle.update()
-    if get(last, Default.last) and not IS_DONE:
-        turtle.done()
+    if get(finish, Default.finish):
+        finish()
 
     return string, tuple(t.position()), t.heading()
 
 
-def finish():
-    global IS_DONE
-    if not IS_DONE:
-        IS_DONE = True
-        turtle.done()
-
-
 # print(draw("F", {'F': 'F+F-F-F+F'}, angle=90, instant=True, last=False))
-
-
-draw(red_increment=1, n=4, asap=True, speed=1)
+# draw(red_increment=1, n=4, asap=True, speed=1)

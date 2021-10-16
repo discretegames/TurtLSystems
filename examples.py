@@ -1,7 +1,6 @@
 
-import turtle as t
+from TurtLSystems import *
 
-t.done()
 # t.done()
 # t.done()
 

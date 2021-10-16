@@ -41,4 +41,4 @@ class Default:
     show_turtle = False
     turtle_shape = 'classic'
     full_circle = 360.0
-    last = True
+    finish = True
