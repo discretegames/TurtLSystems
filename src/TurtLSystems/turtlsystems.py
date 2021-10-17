@@ -111,7 +111,7 @@ class State:  # pylint: disable=too-many-instance-attributes,too-few-public-meth
         position: Tuple[float, float],
         heading: float, angle: float,
         length: float,
-        thickness: int,
+        thickness: float,
         pen_color: Tuple[int, int, int],
         fill_color: Tuple[int, int, int],
         swap_signs: bool,
@@ -136,22 +136,21 @@ def run(  # pylint: disable=invalid-name,too-many-locals,too-many-branches,too-m
     full_circle: float,
     angle: float,
     length: float,
-    thickness: int,
+    thickness: float,
     angle_increment: float,
     length_increment: float,
     length_scalar: float,
-    thickness_increment: int,
+    thickness_increment: float,
     color_increments: Tuple[int, int, int]
 ) -> None:
     """Run turtle `t` on L-system string `string` with given options."""
-    initial_angle, initial_length = angle, length
+    initial_angle, initial_length, initial_thickness = angle, length, thickness
     swap_signs, modify_fill = False, False
     pen_color, fill_color = colors[0], colors[1]
-    thickness = max(1, thickness)
-    t.pencolor(pen_color)
-    t.fillcolor(fill_color)
-    t.pensize(thickness)
     stack: List[State] = []
+
+    def set_pensize() -> None:
+        t.pensize(max(0, thickness))
 
     def set_color(color: Tuple[int, int, int]) -> None:
         nonlocal pen_color, fill_color, modify_fill
@@ -168,10 +167,14 @@ def run(  # pylint: disable=invalid-name,too-many-locals,too-many-branches,too-m
         color[channel] += (1 if decrement else -1) * color_increments[channel]
         set_color(color_tuple(color))
 
+    set_pensize()
+    t.pencolor(pen_color)
+    t.fillcolor(fill_color)
+
     for c in string:  # pylint: disable=invalid-name
         # Length:
         if 'A' <= c <= 'Z':
-            t.pendown()
+            (t.pendown if t.pensize() else t.penup)()
             t.forward(length)
         elif 'a' <= c <= 'z':
             t.penup()
@@ -203,11 +206,14 @@ def run(  # pylint: disable=invalid-name,too-many-locals,too-many-branches,too-m
             angle -= angle_increment
         # Thickness:
         elif c == '=':
-            t.pensize(thickness)
+            thickness = initial_thickness
+            set_pensize()
         elif c == '>':
-            t.pensize(max(1, thickness + thickness_increment))
+            thickness += thickness_increment
+            set_pensize()
         elif c == '<':
-            t.pensize(max(1, thickness - thickness_increment))
+            thickness -= thickness_increment
+            set_pensize()
         # Color:
         elif '0' <= c <= '9':
             set_color(colors[int(c)])
@@ -235,8 +241,8 @@ def run(  # pylint: disable=invalid-name,too-many-locals,too-many-branches,too-m
         elif c == '`':
             stack.clear()
         elif c == '[':
-            stack.append(State((t.xcor(), t.ycor()), t.heading(), angle, length, thickness,
-                         pen_color, fill_color, swap_signs, modify_fill))
+            stack.append(State((t.xcor(), t.ycor()), t.heading(), angle, length,
+                               thickness, pen_color, fill_color, swap_signs, modify_fill))
         elif c == ']':
             if stack:
                 state = stack.pop()
@@ -254,7 +260,7 @@ def draw(  # pylint: disable=too-many-locals,too-many-arguments
     level: int = 4,
     angle: float = 90,
     length: float = 10,
-    thickness: int = 1,
+    thickness: float = 1,
     color: Optional[Tuple[int, int, int]] = (255, 255, 255),
     fill_color: Optional[Tuple[int, int, int]] = (128, 128, 128),
     background_color: Tuple[int, int, int] = (0, 0, 0),
@@ -265,10 +271,11 @@ def draw(  # pylint: disable=too-many-locals,too-many-arguments
     angle_increment: float = 15,
     length_increment: float = 5,
     length_scalar: float = 2,
-    thickness_increment: int = 1,
+    thickness_increment: float = 1,
     red_increment: int = 4,
     green_increment: int = 4,
     blue_increment: int = 4,
+    scale: float = 1,
     prefix: str = '',
     suffix: str = '',
     asap: bool = False,
@@ -309,12 +316,12 @@ def draw(  # pylint: disable=too-many-locals,too-many-arguments
         colors=colors,
         full_circle=full_circle,
         angle=angle,
-        length=length,
-        thickness=thickness,
+        length=scale*length,
+        thickness=scale*thickness,
         angle_increment=angle_increment,
-        length_increment=length_increment,
-        length_scalar=length_scalar,
-        thickness_increment=thickness_increment,
+        length_increment=scale*length_increment,
+        length_scalar=scale*length_scalar,
+        thickness_increment=scale*thickness_increment,
         color_increments=(red_increment, green_increment, blue_increment))
 
     if asap:
