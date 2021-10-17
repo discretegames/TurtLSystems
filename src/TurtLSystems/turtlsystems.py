@@ -1,11 +1,13 @@
 """The core code of the TurtLSystems Python 3 package (https://pypi.org/project/TurtLSystems)."""
 
-from typing import List, Dict, Tuple, Iterable, Optional, Union, cast
-from tempfile import TemporaryDirectory
-from contextlib import ExitStack
 import turtle
 import pathlib
 import subprocess
+from typing import List, Dict, Tuple, Iterable, Optional, Union, cast
+from tempfile import TemporaryDirectory
+from contextlib import ExitStack
+from PIL import Image
+
 
 DEFAULT_COLORS = (
     (255, 255, 255),
@@ -273,7 +275,7 @@ def draw(  # pylint: disable=too-many-locals,too-many-arguments
     thickness: float = 1,
     color: Optional[Tuple[int, int, int]] = (255, 255, 255),
     fill_color: Optional[Tuple[int, int, int]] = (128, 128, 128),
-    background_color: Tuple[int, int, int] = (0, 0, 0),
+    background_color: Optional[Tuple[int, int, int]] = None,
     *,
     colors: Iterable[Tuple[int, int, int]] = DEFAULT_COLORS,
     position: Tuple[float, float] = (0, 0),
@@ -314,7 +316,8 @@ def draw(  # pylint: disable=too-many-locals,too-many-arguments
     if not skip_init and not _INITIALIZED:
         init()
     turtle.colormode(255)
-    turtle.bgcolor(background_color)
+    if background_color:
+        turtle.bgcolor(background_color)
     if asap:
         saved_tracer, saved_delay = turtle.tracer(), turtle.delay()
         turtle.tracer(0, 0)
@@ -341,8 +344,6 @@ def draw(  # pylint: disable=too-many-locals,too-many-arguments
                 tmp_dir = str(path)
             else:
                 tmp_dir = exit_stack.enter_context(TemporaryDirectory())
-
-        print(tmp_dir)
 
         run(t=t,  # todo pass in gif and draws_per_frame
             string=string,
@@ -376,20 +377,40 @@ def find_ghostscript(ghostscript: Optional[str]) -> str:
     return 'gswin64c'  # TODO do smartly in windows, gs in linux
 
 
-# def save_canvas_png(
-#     png: str,
-#     dpi: int,
-#     antialiasing: int,
-#     ghostscript: str,
-#     tmp_dir: str
-# ):
+def save_canvas_png(
+    png: str,
+    scale: float,
+    antialiasing: int,
+    ghostscript: str,
+    tmp_dir: str
+) -> Tuple[int, int]:
+    """TODO docstring"""
+    dpi = round(DPI * scale)
+    eps = str(pathlib.Path(tmp_dir) / f'{EPS_NAME}{EPS_EXT}')
+    canvas = turtle.getcanvas()
+    width = max(canvas.winfo_width(), canvas.canvwidth)  # type: ignore
+    height = max(canvas.winfo_height(), canvas.canvheight)  # type: ignore
+    canvas.postscript(file=eps, x=-width//2, y=-height//2, width=width, height=height)  # type: ignore
+    width, height = round(scale * width), round(scale * height)
+    result = subprocess.run([ghostscript,
+                             '-q',
+                             '-dSAFER',
+                             '-dBATCH',
+                             '-dNOPAUSE',
+                             '-dEPSCrop',
+                             '-sDEVICE=pngalpha',
+                             f'-r{dpi}',
+                             f'-g{width}x{height}',
+                             f'-dGraphicsAlphaBits={antialiasing}', f'-sOutputFile="{png}"', f'"{eps}"'],
+                            check=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding='utf-8')
+    if result.returncode:
+        print(result.stdout)
+    return width, height
 
-#     result = subprocess.run([ghostscript, '-q', '-dSAFER', '-dBATCH', '-dNOPAUSE', '-dEPSCrop', '-sDEVICE=pngalpha',
-#                             f'-r{dpi}', f'-dGraphicsAlphaBits={antialiasing}', f'-sOutputFile="{png}"', f'"{eps}"'],
-#                             check=False, capture_output=True, encoding='utf-8')
-#     if result.returncode:
-#         print(result.stdout)
-#         print(result.stderr)
+
+def pad_image(image: Image.Image, padding: int, background_rgba: Tuple[int, int, int, int]) -> Image.Image:
+    """TODO docstring"""
+    return image
 
 
 def save_png(  # pylint: disable=too-many-arguments
@@ -402,22 +423,16 @@ def save_png(  # pylint: disable=too-many-arguments
     tmp_dir: str
 ) -> None:
     """TODO docstring"""
-    if not png.endswith(PNG_EXT):
-        png += PNG_EXT
-    dpi = round(DPI * scale)
-    eps = str(pathlib.Path(tmp_dir) / f'{EPS_NAME}{EPS_EXT}')
-
-    canvas = turtle.getcanvas()
-    width = max(canvas.winfo_width(), canvas.canvwidth)  # type: ignore
-    height = max(canvas.winfo_height(), canvas.canvheight)  # type: ignore
-    canvas.postscript(file=eps, x=-width//2, y=-height//2, width=width, height=height)  # type: ignore
-
-    result = subprocess.run([ghostscript, '-q', '-dSAFER', '-dBATCH', '-dNOPAUSE', '-dEPSCrop', '-sDEVICE=pngalpha',
-                             f'-r{dpi}', f'-dGraphicsAlphaBits={antialiasing}', f'-sOutputFile="{png}"', f'"{eps}"'],
-                            check=False, capture_output=True, encoding='utf-8')
-    if result.returncode:
-        print(result.stdout)
-        print(result.stderr)
+    png = str(pathlib.Path(png).resolve().with_suffix(PNG_EXT))
+    width, height = save_canvas_png(png, scale, antialiasing, ghostscript, tmp_dir)
+    saved = Image.open(png).convert('RGBA')
+    background_rgba = tuple(map(int, turtle.bgcolor())) + ((0,) if transparent else (255,))
+    background = Image.new('RGBA', (width, height), background_rgba)
+    image = Image.alpha_composite(background, saved)
+    saved.close()
+    if padding is not None:
+        image = pad_image(image, padding, background_rgba)
+    image.save(png)
 
 
 def finish(exit_on_click: bool = True, skip_init: bool = False) -> None:
@@ -431,6 +446,8 @@ def finish(exit_on_click: bool = True, skip_init: bool = False) -> None:
 
 
 if __name__ == '__main__':
-    init((400, 300), canvas_size=(1000, 800))
-    draw(png='test.png', finished=False, asap=True, color=(255, 255, 0))
+    init((400, 300))
+    draw(png='test.png', finished=False, color=(255, 0, 0), background_color=(20, 20, 20), transparent=True, position=(-210, 0),
+         antialiasing=1, output_scale=1)
+    # draw(png='test.png', finished=False, color=(255, 9, 0))
     finish()
