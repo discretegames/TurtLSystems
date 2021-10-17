@@ -1,7 +1,11 @@
 """The core code of the TurtLSystems Python 3 package (https://pypi.org/project/TurtLSystems)."""
 
-from typing import List, Dict, Tuple, Iterable, Optional, Union
+from typing import List, Dict, Tuple, Iterable, Optional, Union, cast
+from tempfile import TemporaryDirectory
+from contextlib import ExitStack
 import turtle
+import pathlib
+import subprocess
 
 DEFAULT_COLORS = (
     (255, 255, 255),
@@ -15,6 +19,12 @@ DEFAULT_COLORS = (
     (128, 0, 255),
     (255, 0, 255),
 )
+PNG_EXT = '.png'
+GIF_EXT = '.gif'
+EPS_EXT = '.eps'
+EPS_NAME = 'drawing'
+DPI = 96
+
 _INITIALIZED, _FINISHED = False, False
 
 
@@ -42,9 +52,9 @@ def make_colors(color: Optional[Tuple[int, int, int]], fill_color: Optional[Tupl
     """Creates colors list."""
     colors = list(map(color_tuple, colors))
     colors.extend(DEFAULT_COLORS[len(colors):])
-    if color is not None:
+    if color:
         colors[0] = color_tuple(color)
-    if fill_color is not None:
+    if fill_color:
         colors[1] = color_tuple(fill_color)
     return colors
 
@@ -150,7 +160,7 @@ def run(  # pylint: disable=invalid-name,too-many-locals,too-many-branches,too-m
     stack: List[State] = []
 
     def set_pensize() -> None:
-        t.pensize(max(0, thickness))
+        t.pensize(max(0, thickness))  # type: ignore
 
     def set_color(color: Tuple[int, int, int]) -> None:
         nonlocal pen_color, fill_color, modify_fill
@@ -285,7 +295,16 @@ def draw(  # pylint: disable=too-many-locals,too-many-arguments
     full_circle: float = 360,
     finished: bool = True,
     exit_on_click: bool = True,
-    skip_init: bool = False
+    skip_init: bool = False,
+    png: Optional[str] = None,
+    gif: Optional[str] = None,
+    padding: Optional[int] = 10,
+    draws_per_frame: int = 1,
+    output_scale: float = 1,
+    antialiasing: int = 1,
+    transparent: bool = False,
+    ghostscript: Optional[str] = None,
+    tmp_dir: Optional[str] = None
 ) -> Optional[Tuple[str, Tuple[float, float], float]]:
     """TODO docstring"""
     if _FINISHED:
@@ -293,7 +312,9 @@ def draw(  # pylint: disable=too-many-locals,too-many-arguments
         return None
 
     if not skip_init and not _INITIALIZED:
-        init(background_color=background_color)
+        init()
+    turtle.colormode(255)
+    turtle.bgcolor(background_color)
     if asap:
         saved_tracer, saved_delay = turtle.tracer(), turtle.delay()
         turtle.tracer(0, 0)
@@ -311,18 +332,33 @@ def draw(  # pylint: disable=too-many-locals,too-many-arguments
     string = prefix + lsystem(start, make_rules(rules), level) + suffix
     colors = make_colors(color, fill_color, colors)
 
-    run(t=t,
-        string=string,
-        colors=colors,
-        full_circle=full_circle,
-        angle=angle,
-        length=scale*length,
-        thickness=scale*thickness,
-        angle_increment=angle_increment,
-        length_increment=scale*length_increment,
-        length_scalar=scale*length_scalar,
-        thickness_increment=scale*thickness_increment,
-        color_increments=(red_increment, green_increment, blue_increment))
+    with ExitStack() as exit_stack:
+        if png or gif:
+            ghostscript = find_ghostscript(ghostscript)
+            if tmp_dir:
+                path = pathlib.Path(tmp_dir).resolve()
+                path.mkdir(parents=True, exist_ok=True)
+                tmp_dir = str(path)
+            else:
+                tmp_dir = exit_stack.enter_context(TemporaryDirectory())
+
+        print(tmp_dir)
+
+        run(t=t,  # todo pass in gif and draws_per_frame
+            string=string,
+            colors=colors,
+            full_circle=full_circle,
+            angle=angle,
+            length=scale*length,
+            thickness=scale*thickness,
+            angle_increment=angle_increment,
+            length_increment=scale*length_increment,
+            length_scalar=scale*length_scalar,
+            thickness_increment=scale*thickness_increment,
+            color_increments=(red_increment, green_increment, blue_increment))
+
+        if png:
+            save_png(png, padding, output_scale, antialiasing, transparent, cast(str, ghostscript), cast(str, tmp_dir))
 
     if asap:
         turtle.tracer(saved_tracer, saved_delay)
@@ -331,6 +367,57 @@ def draw(  # pylint: disable=too-many-locals,too-many-arguments
         finish(exit_on_click, skip_init)
 
     return string, (t.xcor(), t.ycor()), t.heading()
+
+
+def find_ghostscript(ghostscript: Optional[str]) -> str:
+    """TODO docstring"""
+    if ghostscript:
+        return ghostscript
+    return 'gswin64c'  # TODO do smartly in windows, gs in linux
+
+
+# def save_canvas_png(
+#     png: str,
+#     dpi: int,
+#     antialiasing: int,
+#     ghostscript: str,
+#     tmp_dir: str
+# ):
+
+#     result = subprocess.run([ghostscript, '-q', '-dSAFER', '-dBATCH', '-dNOPAUSE', '-dEPSCrop', '-sDEVICE=pngalpha',
+#                             f'-r{dpi}', f'-dGraphicsAlphaBits={antialiasing}', f'-sOutputFile="{png}"', f'"{eps}"'],
+#                             check=False, capture_output=True, encoding='utf-8')
+#     if result.returncode:
+#         print(result.stdout)
+#         print(result.stderr)
+
+
+def save_png(  # pylint: disable=too-many-arguments
+    png: str,
+    padding: Optional[int],
+    scale: float,
+    antialiasing: int,
+    transparent: bool,
+    ghostscript: str,
+    tmp_dir: str
+) -> None:
+    """TODO docstring"""
+    if not png.endswith(PNG_EXT):
+        png += PNG_EXT
+    dpi = round(DPI * scale)
+    eps = str(pathlib.Path(tmp_dir) / f'{EPS_NAME}{EPS_EXT}')
+
+    canvas = turtle.getcanvas()
+    width = max(canvas.winfo_width(), canvas.canvwidth)  # type: ignore
+    height = max(canvas.winfo_height(), canvas.canvheight)  # type: ignore
+    canvas.postscript(file=eps, x=-width//2, y=-height//2, width=width, height=height)  # type: ignore
+
+    result = subprocess.run([ghostscript, '-q', '-dSAFER', '-dBATCH', '-dNOPAUSE', '-dEPSCrop', '-sDEVICE=pngalpha',
+                             f'-r{dpi}', f'-dGraphicsAlphaBits={antialiasing}', f'-sOutputFile="{png}"', f'"{eps}"'],
+                            check=False, capture_output=True, encoding='utf-8')
+    if result.returncode:
+        print(result.stdout)
+        print(result.stderr)
 
 
 def finish(exit_on_click: bool = True, skip_init: bool = False) -> None:
@@ -344,43 +431,6 @@ def finish(exit_on_click: bool = True, skip_init: bool = False) -> None:
 
 
 if __name__ == '__main__':
-    draw()
-    # setup(window_size=(1000 + 8, 300 + 8), canvas_size=(100, 100))
-    # import time
-    # time.sleep(1)
-    # turtle.right(90)
-    # turtle.color(255, 255, 128)
-    # turtle.fd(1000)
-    # import tkinter  # deiconify to shoe
-
-    # canvas = turtle.getcanvas()
-    # root: tkinter.Tk = turtle.Screen()._root  # type: ignore # pylint: disable=protected-access
-    # print(canvas.canvasx(0), root.winfo_x())
-    # x, y = root.winfo_x() + 12, root.winfo_y() + 35
-    # w, h = root.winfo_width() - 8, root.winfo_height() - 8
-    # print(root.winfo_vrootwidth(), root.winfo_width())
-    # print(root.winfo_vrootx(), root.winfo_x())
-    # from pyautogui import screenshot  # type: ignore
-    # screenshot('out.png', region=(x, y, w, h))
-    # print('done')
-    # done()
-    # init(window_size=(10, 30), canvas_size=(1000, 1000))
-    # draw(last=False, color=(255, 100, 0), length=40, thickness=1)
-    # draw(last=False, color=(255, 100, 0), length=40, thickness=15)
-    # try:
-    # except turtle.Terminator:
-    #     print(999)
-    #     exit()
-    # canvas = turtle.getcanvas()._canvas
-    # print(canvas.winfo_width())
-    # # print(canvas.canvwidth, canvas.canvheight)
-    # # print(type(canvas))
-    # # input('wait')
-    # canvas.postscript(file='out.eps')  # works for ps, needs to happen before done
-    # import subprocess
-    # # done()
-    # subprocess.run(
-    #     '''gswin64c -dSAFER -dBATCH -dNOPAUSE -dEPSCrop -r96 -sDEVICE=pngalpha -dGraphicsAlphaBits=4 -sOutputFile=output.png out.eps''')
-    # # -g800x600
-    #
-# transparent=False, aliasing, png=None, gif=None, =1, ghostscript, padding=10, gif_padding=10, scale (applies to input dists), output_scale
+    init((400, 300), canvas_size=(1000, 800))
+    draw(png='test.png', finished=False, asap=True, color=(255, 255, 0))
+    finish()
