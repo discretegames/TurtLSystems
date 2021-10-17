@@ -37,8 +37,8 @@ def clamp(value: int, minimum: int = 0, maximum: int = 255) -> int:
 
 def color_tuple(color: Iterable[int]) -> Tuple[int, int, int]:
     """Converts `color` to tuple with clamped rgb."""
-    red, green, blue = zip(color, range(3))
-    return clamp(red[0]), clamp(green[0]), clamp(blue[0])
+    r, g, b = zip(color, range(3))
+    return clamp(r[0]), clamp(g[0]), clamp(b[0])
 
 
 def make_rules(rules: Union[str, Dict[str, str]]) -> Dict[str, str]:
@@ -68,7 +68,7 @@ def lsystem(start: str, rules: Dict[str, str], level: int) -> str:
     return start
 
 
-def orient(t: turtle.Turtle, position: Tuple[float, float], heading: float) -> None:  # pylint: disable=invalid-name
+def orient(t: turtle.Turtle, position: Tuple[float, float], heading: float) -> None:
     """Silently orients turtle `t` to given `position` and `heading`."""
     speed = t.speed()
     down = t.isdown()
@@ -140,7 +140,7 @@ class State:  # pylint: disable=too-many-instance-attributes,too-few-public-meth
         self.change_fill = modify_fill
 
 
-def run(  # pylint: disable=invalid-name,too-many-locals,too-many-branches,too-many-statements
+def run(  # pylint: disable=too-many-locals,too-many-branches,too-many-statements
     *,
     t: turtle.Turtle,
     string: str,
@@ -183,7 +183,7 @@ def run(  # pylint: disable=invalid-name,too-many-locals,too-many-branches,too-m
     t.pencolor(pen_color)
     t.fillcolor(fill_color)
 
-    for c in string:  # pylint: disable=invalid-name
+    for c in string:
         # Length:
         if 'A' <= c <= 'Z':
             (t.pendown if t.pensize() else t.penup)()
@@ -322,7 +322,7 @@ def draw(  # pylint: disable=too-many-locals,too-many-arguments
         saved_tracer, saved_delay = turtle.tracer(), turtle.delay()
         turtle.tracer(0, 0)
 
-    t = turtle.Turtle()  # pylint: disable=invalid-name
+    t = turtle.Turtle()
     t.degrees(full_circle)
     t.speed(speed)
     t.shape(turtle_shape)
@@ -408,9 +408,28 @@ def save_canvas_png(
     return width, height
 
 
+# todo slow so give messages
 def pad_image(image: Image.Image, padding: int, background_rgba: Tuple[int, int, int, int]) -> Image.Image:
     """TODO docstring"""
-    return image
+    x_min, y_min, x_max, y_max = image.width - 1, image.height - 1, 0, 0
+    data = image.load()
+    empty = True
+    for y in range(image.height):
+        for x in range(image.width):
+            if data[x, y] != background_rgba:
+                empty = False
+                x_min = min(x_min, x)
+                y_min = min(y_min, y)
+                x_max = max(x_max, x)
+                y_max = max(y_max, y)
+    if empty:
+        x_min = x_max = image.width//2
+        y_min = y_max = image.height//2
+    x_min -= padding
+    y_min -= padding
+    x_max = max(x_max + padding, x_min) + 1
+    y_max = max(y_max + padding, y_min) + 1
+    return image.crop((x_min, y_min, x_max, y_max))
 
 
 def save_png(  # pylint: disable=too-many-arguments
@@ -426,7 +445,8 @@ def save_png(  # pylint: disable=too-many-arguments
     png = str(pathlib.Path(png).resolve().with_suffix(PNG_EXT))
     width, height = save_canvas_png(png, scale, antialiasing, ghostscript, tmp_dir)
     saved = Image.open(png).convert('RGBA')
-    background_rgba = tuple(map(int, turtle.bgcolor())) + ((0,) if transparent else (255,))
+    r, g, b = turtle.bgcolor()
+    background_rgba = (int(r), int(g), int(b)) + ((0,) if transparent else (255,))
     background = Image.new('RGBA', (width, height), background_rgba)
     image = Image.alpha_composite(background, saved)
     saved.close()
@@ -446,8 +466,8 @@ def finish(exit_on_click: bool = True, skip_init: bool = False) -> None:
 
 
 if __name__ == '__main__':
-    init((400, 300))
-    draw(png='test.png', finished=False, color=(255, 0, 0), background_color=(20, 20, 20), transparent=True, position=(-210, 0),
-         antialiasing=1, output_scale=1)
+    init()
+    draw(png='test.png', finished=False, color=(255, 0, 0), background_color=(20, 20, 20), transparent=False,
+         antialiasing=1, output_scale=1, show_turtle=False)
     # draw(png='test.png', finished=False, color=(255, 9, 0))
     finish()
