@@ -102,7 +102,7 @@ def init(  # pylint: disable=too-many-arguments
     _INITIALIZED = True
 
 
-# TODO use SimpleNamespace here instead?
+# Dataclasses not in 3.6 and SimpleNamespace is not typed properly so use plain class for state.
 class State:  # pylint: disable=too-many-instance-attributes,too-few-public-methods
     """L-system state."""
 
@@ -337,13 +337,7 @@ def finish(exit_on_click: bool = True, skip_init: bool = False) -> None:
 
 
 if __name__ == '__main__':
-    init(canvas_size=(10000, 2000))
-    draw(finished=True)
-    draw(color=(255, 0, 0), thickness=3)
-    finish()
-    init()
-    finish()
-    finish()
+    draw()
     # setup(window_size=(1000 + 8, 300 + 8), canvas_size=(100, 100))
     # import time
     # time.sleep(1)
