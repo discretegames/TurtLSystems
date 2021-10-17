@@ -2,5 +2,5 @@
 code toy for creating Lindenmayer system (L-systems) fractals and patterns via turtle graphics."""
 
 # pylint: disable=invalid-name
-from TurtLSystems.turtlsystems import setup, draw, finish
-__all__ = ['setup', 'draw', 'finish']
+from TurtLSystems.turtlsystems import init, draw, finish
+__all__ = ['init', 'draw', 'finish']

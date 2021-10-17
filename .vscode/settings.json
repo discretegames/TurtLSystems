@@ -33,10 +33,12 @@
 	],
 	"python.linting.pylintEnabled": true,
 	"python.linting.pylintArgs": [
-		"--ignored-modules=turtle"
+		"--ignored-modules=turtle",
+		"--max-line-length=119"
 	],
 	"python.linting.flake8Enabled": true,
 	"python.linting.flake8Args": [
 		"--max-line-length=119"
 	],
+	"python.pythonPath": "C:\\Users\\r\\AppData\\Local\\Programs\\Python\\Python310\\python.exe",
 }
