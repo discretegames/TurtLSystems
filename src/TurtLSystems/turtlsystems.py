@@ -2,8 +2,8 @@
 
 import os
 import turtle
-import pathlib
 import subprocess
+from pathlib import Path
 from typing import List, Dict, Tuple, Iterable, Optional, Union, cast
 from tempfile import TemporaryDirectory
 from contextlib import ExitStack
@@ -52,7 +52,7 @@ def make_rules(rules: Union[str, Dict[str, str]]) -> Dict[str, str]:
     """Creates rules dict."""
     if isinstance(rules, str):
         split = rules.split()
-        rules = {inp: out for inp, out in zip(split[::2], split[1::2])}
+        rules = dict(zip(split[::2], split[1::2]))
     return rules
 
 
@@ -66,6 +66,25 @@ def make_colors(color: Optional[Tuple[int, int, int]], fill_color: Optional[Tupl
     if fill_color:
         colors[1] = color_tuple(fill_color)
     return colors
+
+
+def make_drawdir(tmpdir: str) -> Path:
+    """Creates drawdir in tempdir labeled with current draw number."""
+    drawdir = Path(tmpdir).resolve() / DRAW_DIR_NAME.format(_DRAW_NUMBER)
+    drawdir.mkdir(parents=True, exist_ok=True)
+    for file in drawdir.iterdir():
+        if file.is_file():
+            file.unlink(missing_ok=True)
+    return drawdir
+
+
+def make_path(path: Union[str, Path], filename: Optional[str], ext: str) -> str:
+    """Creates path string."""
+    if isinstance(path, str):
+        path = Path(path)
+    if filename is not None:
+        path /= filename
+    return str(path.with_suffix(ext).resolve())
 
 
 def lsystem(start: str, rules: Dict[str, str], level: int) -> str:
@@ -105,7 +124,7 @@ def guess_ghostscript(ghostscript: Optional[str] = None) -> str:
     locations = "C:\\Program Files\\gs", "C:\\Program Files (x86)\\gs"
     files = 'gswin64c.exe', 'gswin32c.exe', 'gs.exe'
     for location in locations:
-        path = pathlib.Path(location)
+        path = Path(location)
         if path.exists():
             versions = [v for v in path.iterdir() if v.is_dir() and v.name.startswith('gs')]
             versions.sort(key=lambda v: version.parse(v.name[2:]), reverse=True)
@@ -193,13 +212,32 @@ def run(  # pylint: disable=too-many-branches,too-many-statements
     length_scalar: float,
     thickness_increment: float,
     color_increments: Tuple[int, int, int],
-    gif: Optional[str]
-) -> None:
+    gif: Optional[str],
+    draws_per_frame: int,
+    max_frames: int,
+    drawdir: Optional[Path]
+) -> List[Tuple[Tuple[int, int], Tuple[int, int, int]]]:
     """Run turtle `t` on L-system string `string` with given options."""
     initial_angle, initial_length, initial_thickness = angle, length, thickness
     swap_signs, modify_fill = False, False
     pen_color, fill_color = colors[0], colors[1]
     stack: List[State] = []
+    gif_data: List[Tuple[Tuple[int, int], Tuple[int, int, int]]] = []
+    draws, frames_attempted = 0, 0
+
+    def save_frame() -> None:
+        nonlocal frames_attempted
+        frames_attempted += 1
+        if len(gif_data) < max_frames:
+            eps = make_path(cast(Path, drawdir), FRAME_NAME.format(len(gif_data)), EPS_EXT)
+            gif_data.append((save_eps(eps), cur_background_color()))
+
+    def gif_handler() -> None:
+        if gif:
+            nonlocal draws
+            draws += 1
+            if draws % draws_per_frame == 0:
+                save_frame()
 
     def set_pensize() -> None:
         t.pensize(max(0, thickness))  # type: ignore
@@ -222,12 +260,15 @@ def run(  # pylint: disable=too-many-branches,too-many-statements
     set_pensize()
     t.pencolor(pen_color)
     t.fillcolor(fill_color)
+    if gif:
+        save_frame()
 
     for c in string:
         # Length:
         if 'A' <= c <= 'Z':
             (t.pendown if t.pensize() else t.penup)()
             t.forward(length)
+            gif_handler()
         elif 'a' <= c <= 'z':
             t.penup()
             t.forward(length)
@@ -288,8 +329,10 @@ def run(  # pylint: disable=too-many-branches,too-many-statements
             t.begin_fill()
         elif c == '}':
             t.end_fill()
+            gif_handler()
         elif c == '@':
             t.dot(None, fill_color)
+            gif_handler()
         elif c == '`':
             stack.clear()
         elif c == '[':
@@ -305,6 +348,11 @@ def run(  # pylint: disable=too-many-branches,too-many-statements
         elif c == '$':
             break
 
+    if gif:
+        print(f'Prepped {len(gif_data)} gif frames of {frames_attempted} attempted for {draws + 1} draws.')
+
+    return gif_data
+
 # todo dry up png options?
 
 
@@ -313,8 +361,8 @@ def draw(
     rules: str = 'F F+F-F-F+F',
     angle: float = 90,
     length: float = 10,
-    thickness: float = 1,
     level: int = 4,
+    thickness: float = 1,
     color: Optional[Tuple[int, int, int]] = (255, 255, 255),
     fill_color: Optional[Tuple[int, int, int]] = (128, 128, 128),
     background_color: Optional[Tuple[int, int, int]] = None,
@@ -337,7 +385,7 @@ def draw(
     show_turtle: bool = False,
     turtle_shape: str = 'classic',
     full_circle: float = 360,
-    finished: bool = True,
+    finisher: bool = True,
     exit_on_click: bool = True,
     skip_init: bool = False,
     png: Optional[str] = None,
@@ -386,32 +434,34 @@ def draw(
         if png or gif:
             if not tmpdir:
                 tmpdir = exit_stack.enter_context(TemporaryDirectory())
-            drawdir = pathlib.Path(tmpdir).resolve() / DRAW_DIR_NAME.format(_DRAW_NUMBER)
-            drawdir.mkdir(parents=True, exist_ok=True)
+            drawdir = make_drawdir(tmpdir)
 
-        run(t=t,  # todo pass in gif and draws_per_frame
-            string=string,
-            colors=colors,
-            full_circle=full_circle,
-            angle=angle,
-            length=scale*length,
-            thickness=scale*thickness,
-            angle_increment=angle_increment,
-            length_increment=scale*length_increment,
-            length_scalar=scale*length_scalar,
-            thickness_increment=scale*thickness_increment,
-            color_increments=(red_increment, green_increment, blue_increment),
-            gif=gif)
-
+        gif_data = run(t=t,
+                       string=string,
+                       colors=colors,
+                       full_circle=full_circle,
+                       angle=angle,
+                       length=scale*length,
+                       thickness=scale*thickness,
+                       angle_increment=angle_increment,
+                       length_increment=scale*length_increment,
+                       length_scalar=scale*length_scalar,
+                       thickness_increment=scale*thickness_increment,
+                       color_increments=(red_increment, green_increment, blue_increment),
+                       gif=gif,
+                       draws_per_frame=draws_per_frame,
+                       max_frames=max_frames,
+                       drawdir=drawdir if gif else None)
         if asap:
             turtle.tracer(saved_tracer, saved_delay)
             turtle.update()
-
         if png:
-            eps = str((drawdir / FINAL_NAME).with_suffix(EPS_EXT))
+            eps = make_path(drawdir, FINAL_NAME, EPS_EXT)
             save_png(png, eps, save_eps(eps), output_scale, antialiasing, cur_background_color(), padding, transparent)
+        if gif:
+            pass
 
-    if finished:
+    if finisher:
         finish(exit_on_click, skip_init)
 
     return string, (t.xcor(), t.ycor()), t.heading()
@@ -419,6 +469,7 @@ def draw(
 
 def save_eps(eps: str) -> Tuple[int, int]:
     """TODO docstring"""
+    turtle.update()  # todo check if truly needed for gifs
     canvas = turtle.getcanvas()
     width = max(canvas.winfo_width(), canvas.canvwidth)  # type: ignore
     height = max(canvas.winfo_height(), canvas.canvheight)  # type: ignore
@@ -432,7 +483,7 @@ def eps_to_png(eps: str, png: str, size: Tuple[int, int], output_scale: float, a
     _GHOSTSCRIPT = guess_ghostscript(_GHOSTSCRIPT)  # Re-get ghostscript just in case init was never called.
     result = subprocess.run([_GHOSTSCRIPT,
                              '-q',
-                             '-dSAFER',
+                            '-dSAFER',
                              '-dBATCH',
                              '-dNOPAUSE',
                              '-dEPSCrop',
@@ -440,7 +491,7 @@ def eps_to_png(eps: str, png: str, size: Tuple[int, int], output_scale: float, a
                              f'-r{round(DPI * output_scale)}',
                              f'-g{round(output_scale * size[0])}x{round(output_scale * size[1])}',
                              f'-dGraphicsAlphaBits={antialiasing}',
-                             f'-sOutputFile={png}',  # todo test if quotes needed at all, try png with space
+                             f'-sOutputFile={png}',
                              eps],
                             check=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding='utf-8')
     if result.returncode:
@@ -474,7 +525,7 @@ def pad_image(image: Image.Image, padding: int) -> Image.Image:
 def save_png(png: str, eps: str, size: Tuple[int, int], output_scale: float, antialiasing: int,
              background_color: Tuple[int, int, int], padding: Optional[int], transparent: bool) -> None:
     """TODO docstring"""
-    png = str(pathlib.Path(png).with_suffix(PNG_EXT).resolve())
+    png = make_path(png, None, PNG_EXT)
     eps_to_png(eps, png, size, output_scale, antialiasing)
     image = Image.open(png).convert('RGBA')
     if padding is not None:
@@ -487,7 +538,7 @@ def save_png(png: str, eps: str, size: Tuple[int, int], output_scale: float, ant
 
 
 def finish(exit_on_click: bool = True, skip_init: bool = False) -> None:
-    """Finish drawing and keep window open. Only needed if all calls to `draw` specified `finished=False`."""
+    """Finish drawing and keep window open. Only needed if all calls to `draw` specified `finisher=False`."""
     if not skip_init and not _INITIALIZED:
         init()
     global _FINISHED
@@ -498,7 +549,6 @@ def finish(exit_on_click: bool = True, skip_init: bool = False) -> None:
 
 if __name__ == '__main__':
     init((600, 600))
-    draw("F-G-G", "F F-G+F+G-F G ,GG", 120, 16, 1, 5, heading=30, position=(-250, 0), png='tri',
-         padding=10, finished=False, asap=True, scale=.4, output_scale=2, transparent=False, tmpdir='tmp')
-    # draw("F-G-G", "F F-G+F+G-F G ,GG", 120, 15, 1, 5, heading=30, position=(-250, 0), png='tri',
-    #      padding=None, finished=False, scale=1, output_scale=1, transparent=True, tmpdir='tmp')
+    draw("F-G-G", "F {F-G+F+G}-F G GG", 120, 20, 4, heading=30, position=(-250, 0),
+         png='tri', gif='test', max_frames=100, draws_per_frame=1, color=(240, 0, 0),
+         padding=10, finisher=False, asap=True, transparent=False, tmpdir='tmp')
