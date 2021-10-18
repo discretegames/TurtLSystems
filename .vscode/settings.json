@@ -39,11 +39,11 @@
 	"python.linting.pylintEnabled": true,
 	"python.linting.pylintArgs": [
 		"--ignored-modules=turtle",
-		"--max-line-length=119",
+		"--max-line-length=120",
 		"--disable=invalid-name,too-many-arguments,too-many-locals,global-statement"
 	],
 	"python.linting.flake8Enabled": true,
 	"python.linting.flake8Args": [
-		"--max-line-length=119"
+		"--max-line-length=120"
 	]
 }

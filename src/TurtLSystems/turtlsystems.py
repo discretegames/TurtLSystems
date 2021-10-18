@@ -376,7 +376,7 @@ def draw(
     show_turtle: bool = False,
     turtle_shape: str = 'classic',
     full_circle: float = 360,
-    finisher: bool = True,
+    fin: bool = True,
     exit_on_click: bool = True,
     skip_init: bool = False,
     png: Optional[str] = None,
@@ -389,8 +389,10 @@ def draw(
     max_frames: int = 100,
     duration: int = 20,
     wait: int = 500,
+    delay: int = 0,
     loops: Optional[int] = None,
     reverse: bool = False,
+    alternate: bool = False,
     optimize: bool = True,
     tmpdir: Optional[str] = None
 ) -> Optional[Tuple[str, Tuple[float, float], float]]:
@@ -426,8 +428,10 @@ def draw(
 
     with ExitStack() as exit_stack:
         if png or gif:
+            save_gif_pngs = True
             if not tmpdir:
                 tmpdir = exit_stack.enter_context(TemporaryDirectory())
+                save_gif_pngs = False
             drawdir = make_drawdir(tmpdir)
 
         gif_data = run(t=t,
@@ -448,20 +452,60 @@ def draw(
                        drawdir=drawdir if gif else None)
         if png:
             eps = str((drawdir / FINAL_NAME).with_suffix(EPS_EXT))
-            save_png(png, eps, save_eps(eps), output_scale, antialiasing, get_background_color(), padding, transparent)
+            png, _, _ = save_png(png, eps, save_eps(eps), output_scale, antialiasing,
+                                 get_background_color(), padding, transparent)
+            print(f'Saved png "{png}".')
 
         if gif:
-            save_gif(gif, gif_data, output_scale, antialiasing, padding,
-                     transparent, duration, wait, loops, reverse, optimize)
+            gif = save_gif(gif, gif_data, output_scale, antialiasing, padding, transparent,
+                           duration, wait, delay, loops, reverse, alternate, optimize, save_gif_pngs)
+            print(f'Saved gif "{gif}".')
 
         if asap:
             turtle.tracer(saved_tracer, saved_delay)
             turtle.update()
 
-    if finisher:
+    if fin:
         finish(exit_on_click, skip_init)
 
     return string, (t.xcor(), t.ycor()), t.heading()
+
+
+def save_eps(eps: str) -> Tuple[int, int]:
+    """TODO docstring"""
+    turtle.update()
+    canvas = turtle.getcanvas()
+    width = max(canvas.winfo_width(), canvas.canvwidth)  # type: ignore
+    height = max(canvas.winfo_height(), canvas.canvheight)  # type: ignore
+    canvas.postscript(file=eps, x=-width//2, y=-height//2, width=width, height=height)  # type: ignore
+    return width, height
+
+
+def save_png(
+    png: str,
+    eps: str,
+    size: Tuple[int, int],
+    output_scale: float,
+    antialiasing: int,
+    background_color: Tuple[int, int, int],
+    padding: Optional[int],
+    transparent: bool,
+    rect: Optional[Tuple[int, int, int, int]] = None,
+    resave: bool = True,
+) -> Tuple[str, Image.Image, Optional[Tuple[int, int, int, int]]]:
+    """TODO docstring"""
+    png = str(Path(png).with_suffix(PNG_EXT).resolve())
+    eps_to_png(eps, png, size, output_scale, antialiasing)
+    image = Image.open(png).convert('RGBA')
+    if padding is not None:
+        if rect is None:
+            rect = get_padding_rect(image, round(output_scale * padding))
+        image = image.crop(rect)
+    background = Image.new('RGBA', image.size, background_color + ((0,) if transparent else (255,)))
+    image = Image.alpha_composite(background, image)
+    if resave:
+        image.save(png)
+    return png, image, rect
 
 
 def save_gif(
@@ -473,38 +517,39 @@ def save_gif(
     transparent: bool,
     duration: int,
     wait: int,
+    delay: int,
     loops: Optional[int],
     reverse: bool,
-    optimize: bool
-) -> None:
+    alternate: bool,
+    optimize: bool,
+    save_gif_pngs: bool
+) -> str:
     """TODO docstring"""
     rect = None
     images = []
-    for eps, size, bg in reversed(gif_data):  # Reverse so rect corresponds to last frame.
+    for i, (eps, size, bg) in enumerate(reversed(gif_data)):  # Reverse so rect corresponds to last frame.
         png = str(Path(eps).with_suffix(PNG_EXT))
-        image, r = save_png(png, eps, size, output_scale, antialiasing, bg, padding, transparent, rect)
+        _, image, r = save_png(png, eps, size, output_scale, antialiasing,
+                               bg, padding, transparent, rect, save_gif_pngs)
         images.append(image)
         if rect is None:
             rect = r
+            print(f'Making {len(gif_data)} gif frames..', end='', flush=True)
+        elif (len(gif_data) - i) % 10 == 0:
+            print(f'{len(gif_data) - i}..', end='', flush=True)
+    print('.')
     if not reverse:
         images.reverse()  # Reversing here puts it back in proper order.
-    if loops is None:
-        loops = 0
+    if alternate:
+        images.extend(images[-2:0:-1])
     gif = str(Path(gif).with_suffix(GIF_EXT).resolve())
-    append = images[1:] + [images[-1]] * (max(0, wait - duration) // duration)
-    images[0].save(gif, save_all=True, append_images=append, loop=loops, duration=duration,
+    delaying = [images[0]] * (max(0, delay - duration) // duration)
+    waiting = [images[-1]] * (max(0, wait - duration) // duration)
+    frames = delaying + images[1:] + waiting
+    images[0].save(gif, save_all=True, append_images=frames, loop=loops or 0, duration=duration,
                    optimize=optimize, transparency=0 if transparent else 255)
-    print(f'Saved gif "{gif}".')
-
-
-def save_eps(eps: str) -> Tuple[int, int]:
-    """TODO docstring"""
-    turtle.update()
-    canvas = turtle.getcanvas()
-    width = max(canvas.winfo_width(), canvas.canvwidth)  # type: ignore
-    height = max(canvas.winfo_height(), canvas.canvheight)  # type: ignore
-    canvas.postscript(file=eps, x=-width//2, y=-height//2, width=width, height=height)  # type: ignore
-    return width, height
+    # PIL seems to treat blank animated gifs like static gifs, so their timing is wrong. But nbd since they're blank.
+    return gif
 
 
 def eps_to_png(eps: str, png: str, size: Tuple[int, int], output_scale: float, antialiasing: int) -> None:
@@ -552,34 +597,8 @@ def get_padding_rect(image: Image.Image, padding: int) -> Tuple[int, int, int, i
     return x_min, y_min, x_max, y_max
 
 
-def save_png(
-    png: str,
-    eps: str,
-    size: Tuple[int, int],
-    output_scale: float,
-    antialiasing: int,
-    background_color: Tuple[int, int, int],
-    padding: Optional[int],
-    transparent: bool,
-    rect: Optional[Tuple[int, int, int, int]] = None
-) -> Tuple[Image.Image, Optional[Tuple[int, int, int, int]]]:
-    """TODO docstring"""
-    png = str(Path(png).with_suffix(PNG_EXT).resolve())
-    eps_to_png(eps, png, size, output_scale, antialiasing)
-    image = Image.open(png).convert('RGBA')
-    if padding is not None:
-        if rect is None:
-            rect = get_padding_rect(image, round(output_scale * padding))
-        image = image.crop(rect)
-    background = Image.new('RGBA', image.size, background_color + ((0,) if transparent else (255,)))
-    image = Image.alpha_composite(background, image)
-    image.save(png)  # todo ideally don't always resave
-    print(f'Saved png "{png}".')
-    return image, rect
-
-
 def finish(exit_on_click: bool = True, skip_init: bool = False) -> None:
-    """Finish drawing and keep window open. Only needed if all calls to `draw` specified `finisher=False`."""
+    """Finish drawing and keep window open. Only needed if all calls to `draw` specified `fin=False`."""
     if not skip_init and not _INITIALIZED:
         init()
     global _FINISHED
@@ -589,7 +608,10 @@ def finish(exit_on_click: bool = True, skip_init: bool = False) -> None:
 
 
 if __name__ == '__main__':
-    init((600, 600), background_color=(0, 0, 100))
-    draw("F-G-G", "F {F-G+F+G}-F G GG", 120, 20, 4, heading=30, position=(-250, 0),
-         png='tri', gif='test', max_frames=200, draws_per_frame=7, color=(240, 0, 0),
-         padding=10, finisher=False, asap=True, transparent=True, tmpdir='tmp', optimize=True)
+    init((600, 600), background_color=(40, 40, 40))
+    st = "F-G-G"
+    ru = "F {F-G+F+G}-F G GG"
+
+    draw(st, ru, 120, 20, 4, heading=30, position=(-255, 0), delay=1000,
+         gif='test', max_frames=200, draws_per_frame=10, wait=0, alternate=False,
+         padding=10, fin=False, asap=True, reverse=False, tmpdir='')
