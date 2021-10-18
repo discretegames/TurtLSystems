@@ -78,15 +78,6 @@ def make_drawdir(tmpdir: str) -> Path:
     return drawdir
 
 
-def make_path(path: Union[str, Path], filename: Optional[str], ext: str) -> str:
-    """Creates path string."""
-    if isinstance(path, str):
-        path = Path(path)
-    if filename is not None:
-        path /= filename
-    return str(path.with_suffix(ext).resolve())
-
-
 def lsystem(start: str, rules: Dict[str, str], level: int) -> str:
     """Iterates L-system initialzed to `start` based on `rules` `level` number of times."""
     for _ in range(level):
@@ -107,7 +98,7 @@ def orient(t: turtle.Turtle, position: Tuple[float, float], heading: float) -> N
         t.pendown()
 
 
-def cur_background_color() -> Tuple[int, int, int]:
+def get_background_color() -> Tuple[int, int, int]:
     """Returns current turtle graphics background color. Assumes it's a 0-255 tuple."""
     r, g, b = turtle.bgcolor()
     return int(r), int(g), int(b)
@@ -216,21 +207,21 @@ def run(  # pylint: disable=too-many-branches,too-many-statements
     draws_per_frame: int,
     max_frames: int,
     drawdir: Optional[Path]
-) -> List[Tuple[Tuple[int, int], Tuple[int, int, int]]]:
+) -> List[Tuple[str, Tuple[int, int], Tuple[int, int, int]]]:
     """Run turtle `t` on L-system string `string` with given options."""
     initial_angle, initial_length, initial_thickness = angle, length, thickness
     swap_signs, modify_fill = False, False
     pen_color, fill_color = colors[0], colors[1]
     stack: List[State] = []
-    gif_data: List[Tuple[Tuple[int, int], Tuple[int, int, int]]] = []
+    gif_data: List[Tuple[str, Tuple[int, int], Tuple[int, int, int]]] = []
     draws, frames_attempted = 0, 0
 
     def save_frame() -> None:
         nonlocal frames_attempted
         frames_attempted += 1
         if len(gif_data) < max_frames:
-            eps = make_path(cast(Path, drawdir), FRAME_NAME.format(len(gif_data)), EPS_EXT)
-            gif_data.append((save_eps(eps), cur_background_color()))
+            eps = str((cast(Path, drawdir) / FRAME_NAME.format(len(gif_data))).with_suffix(EPS_EXT))
+            gif_data.append((eps, save_eps(eps), get_background_color()))
 
     def gif_handler() -> None:
         if gif:
@@ -349,11 +340,11 @@ def run(  # pylint: disable=too-many-branches,too-many-statements
             break
 
     if gif:
+        if draws % draws_per_frame != 0:
+            save_frame()  # Save frame of final changes unless nothing has changed.
         print(f'Prepped {len(gif_data)} gif frames of {frames_attempted} attempted for {draws + 1} draws.')
 
     return gif_data
-
-# todo dry up png options?
 
 
 def draw(
@@ -395,9 +386,12 @@ def draw(
     transparent: bool = False,
     gif: Optional[str] = None,
     draws_per_frame: int = 1,
-    sec_per_frame: float = 0.02,
     max_frames: int = 100,
-    loops: int = 0,
+    duration: int = 20,
+    wait: int = 500,
+    loops: Optional[int] = None,
+    reverse: bool = False,
+    optimize: bool = True,
     tmpdir: Optional[str] = None
 ) -> Optional[Tuple[str, Tuple[float, float], float]]:
     """TODO docstring"""
@@ -452,14 +446,17 @@ def draw(
                        draws_per_frame=draws_per_frame,
                        max_frames=max_frames,
                        drawdir=drawdir if gif else None)
+        if png:
+            eps = str((drawdir / FINAL_NAME).with_suffix(EPS_EXT))
+            save_png(png, eps, save_eps(eps), output_scale, antialiasing, get_background_color(), padding, transparent)
+
+        if gif:
+            save_gif(gif, gif_data, output_scale, antialiasing, padding,
+                     transparent, duration, wait, loops, reverse, optimize)
+
         if asap:
             turtle.tracer(saved_tracer, saved_delay)
             turtle.update()
-        if png:
-            eps = make_path(drawdir, FINAL_NAME, EPS_EXT)
-            save_png(png, eps, save_eps(eps), output_scale, antialiasing, cur_background_color(), padding, transparent)
-        if gif:
-            pass
 
     if finisher:
         finish(exit_on_click, skip_init)
@@ -467,9 +464,42 @@ def draw(
     return string, (t.xcor(), t.ycor()), t.heading()
 
 
+def save_gif(
+    gif: str,
+    gif_data: List[Tuple[str, Tuple[int, int], Tuple[int, int, int]]],
+    output_scale: float,
+    antialiasing: int,
+    padding: Optional[int],
+    transparent: bool,
+    duration: int,
+    wait: int,
+    loops: Optional[int],
+    reverse: bool,
+    optimize: bool
+) -> None:
+    """TODO docstring"""
+    rect = None
+    images = []
+    for eps, size, bg in reversed(gif_data):  # Reverse so rect corresponds to last frame.
+        png = str(Path(eps).with_suffix(PNG_EXT))
+        image, r = save_png(png, eps, size, output_scale, antialiasing, bg, padding, transparent, rect)
+        images.append(image)
+        if rect is None:
+            rect = r
+    if not reverse:
+        images.reverse()  # Reversing here puts it back in proper order.
+    if loops is None:
+        loops = 0
+    gif = str(Path(gif).with_suffix(GIF_EXT).resolve())
+    append = images[1:] + [images[-1]] * (max(0, wait - duration) // duration)
+    images[0].save(gif, save_all=True, append_images=append, loop=loops, duration=duration,
+                   optimize=optimize, transparency=0 if transparent else 255)
+    print(f'Saved gif "{gif}".')
+
+
 def save_eps(eps: str) -> Tuple[int, int]:
     """TODO docstring"""
-    turtle.update()  # todo check if truly needed for gifs
+    turtle.update()
     canvas = turtle.getcanvas()
     width = max(canvas.winfo_width(), canvas.canvwidth)  # type: ignore
     height = max(canvas.winfo_height(), canvas.canvheight)  # type: ignore
@@ -498,7 +528,7 @@ def eps_to_png(eps: str, png: str, size: Tuple[int, int], output_scale: float, a
         print(result.stdout)
 
 
-def pad_image(image: Image.Image, padding: int) -> Image.Image:
+def get_padding_rect(image: Image.Image, padding: int) -> Tuple[int, int, int, int]:
     """TODO docstring"""
     print(f'Padding {image.width}x{image.height} pixel image...')
     x_min, y_min, x_max, y_max = image.width - 1, image.height - 1, 0, 0
@@ -517,24 +547,35 @@ def pad_image(image: Image.Image, padding: int) -> Image.Image:
         y_min = y_max = image.height//2
     x_min -= padding
     y_min -= padding
-    x_max = max(x_max + padding, x_min)
-    y_max = max(y_max + padding, y_min)
-    return image.crop((x_min, y_min, x_max + 1, y_max + 1))
+    x_max = max(x_max + padding, x_min) + 1
+    y_max = max(y_max + padding, y_min) + 1
+    return x_min, y_min, x_max, y_max
 
 
-def save_png(png: str, eps: str, size: Tuple[int, int], output_scale: float, antialiasing: int,
-             background_color: Tuple[int, int, int], padding: Optional[int], transparent: bool) -> None:
+def save_png(
+    png: str,
+    eps: str,
+    size: Tuple[int, int],
+    output_scale: float,
+    antialiasing: int,
+    background_color: Tuple[int, int, int],
+    padding: Optional[int],
+    transparent: bool,
+    rect: Optional[Tuple[int, int, int, int]] = None
+) -> Tuple[Image.Image, Optional[Tuple[int, int, int, int]]]:
     """TODO docstring"""
-    png = make_path(png, None, PNG_EXT)
+    png = str(Path(png).with_suffix(PNG_EXT).resolve())
     eps_to_png(eps, png, size, output_scale, antialiasing)
     image = Image.open(png).convert('RGBA')
     if padding is not None:
-        image = pad_image(image, round(output_scale * padding))
+        if rect is None:
+            rect = get_padding_rect(image, round(output_scale * padding))
+        image = image.crop(rect)
     background = Image.new('RGBA', image.size, background_color + ((0,) if transparent else (255,)))
-    final = Image.alpha_composite(background, image)
-    image.close()
-    final.save(png)
-    print(f'Saved "{png}".')
+    image = Image.alpha_composite(background, image)
+    image.save(png)  # todo ideally don't always resave
+    print(f'Saved png "{png}".')
+    return image, rect
 
 
 def finish(exit_on_click: bool = True, skip_init: bool = False) -> None:
@@ -548,7 +589,7 @@ def finish(exit_on_click: bool = True, skip_init: bool = False) -> None:
 
 
 if __name__ == '__main__':
-    init((600, 600))
+    init((600, 600), background_color=(0, 0, 100))
     draw("F-G-G", "F {F-G+F+G}-F G GG", 120, 20, 4, heading=30, position=(-250, 0),
-         png='tri', gif='test', max_frames=100, draws_per_frame=1, color=(240, 0, 0),
-         padding=10, finisher=False, asap=True, transparent=False, tmpdir='tmp')
+         png='tri', gif='test', max_frames=200, draws_per_frame=7, color=(240, 0, 0),
+         padding=10, finisher=False, asap=True, transparent=True, tmpdir='tmp', optimize=True)
