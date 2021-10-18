@@ -40,7 +40,7 @@
 	"python.linting.pylintArgs": [
 		"--ignored-modules=turtle",
 		"--max-line-length=119",
-		"--disable=invalid-name"
+		"--disable=invalid-name,too-many-arguments,too-many-locals,global-statement"
 	],
 	"python.linting.flake8Enabled": true,
 	"python.linting.flake8Args": [
