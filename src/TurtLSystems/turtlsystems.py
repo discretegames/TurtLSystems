@@ -1,5 +1,6 @@
 """The core code of the TurtLSystems Python 3 package (https://pypi.org/project/TurtLSystems)."""
 
+import os
 import turtle
 import pathlib
 import subprocess
@@ -7,6 +8,7 @@ from typing import List, Dict, Tuple, Iterable, Optional, Union, cast
 from tempfile import TemporaryDirectory
 from contextlib import ExitStack
 from PIL import Image
+from packaging import version
 
 
 DEFAULT_COLORS = (
@@ -27,7 +29,9 @@ EPS_EXT = '.eps'
 EPS_NAME = 'drawing'
 DPI = 96
 
-_INITIALIZED, _FINISHED = False, False
+_INITIALIZED = False
+_FINISHED = False
+_GHOSTSCRIPT: Optional[str] = None
 
 
 def clamp(value: int, minimum: int = 0, maximum: int = 255) -> int:
@@ -81,6 +85,28 @@ def orient(t: turtle.Turtle, position: Tuple[float, float], heading: float) -> N
         t.pendown()
 
 
+def guess_ghostscript(ghostscript: Optional[str] = None) -> str:
+    """Guess the path to ghostscript if it's not already set. Only robust on Windows."""
+    if ghostscript:
+        return ghostscript
+    if os.name != 'nt':
+        return 'gs'  # I'm not sure where to look on non-Windows OSes so just guess "gs".
+    locations = "C:\\Program Files\\gs", "C:\\Program Files (x86)\\gs"
+    files = 'gswin64c.exe', 'gswin32c.exe', 'gs.exe'
+    for location in locations:
+        path = pathlib.Path(location)
+        if path.exists():
+            versions = [v for v in path.iterdir() if v.is_dir() and v.name.startswith('gs')]
+            versions.sort(key=lambda v: version.parse(v.name[2:]), reverse=True)
+            for v in versions:
+                for file in files:
+                    exe = v / 'bin' / file
+                    if exe.exists():
+                        print(f'Found ghostscript at "{exe}".')
+                        return str(exe)
+    return 'gswin64c'  # Last ditch guess.
+
+
 def init(  # pylint: disable=too-many-arguments
     window_size: Tuple[Union[int, float], Union[int, float]] = (0.75, 0.75),
     window_title: str = "TurtLSystems",
@@ -89,7 +115,10 @@ def init(  # pylint: disable=too-many-arguments
     window_position: Tuple[Optional[int], Optional[int]] = (None, None),
     canvas_size: Tuple[Optional[int], Optional[int]] = (None, None),
     delay: int = 0,
-    mode: str = 'standard'
+    mode: str = 'standard',
+    ghostscript: Optional[str] = None
+
+
 ) -> None:
     """TODO docstring"""
     if _FINISHED:
@@ -110,7 +139,8 @@ def init(  # pylint: disable=too-many-arguments
     turtle.colormode(255)
     turtle.bgcolor(color_tuple(background_color))
     turtle.bgpic(background_image)
-    global _INITIALIZED  # pylint: disable=global-statement
+    global _GHOSTSCRIPT, _INITIALIZED  # pylint: disable=global-statement
+    _GHOSTSCRIPT = guess_ghostscript(ghostscript)
     _INITIALIZED = True
 
 
@@ -269,10 +299,10 @@ def run(  # pylint: disable=too-many-locals,too-many-branches,too-many-statement
 def draw(  # pylint: disable=too-many-locals,too-many-arguments
     start: str = 'F',
     rules: str = 'F F+F-F-F+F',
-    level: int = 4,
     angle: float = 90,
     length: float = 10,
     thickness: float = 1,
+    level: int = 4,
     color: Optional[Tuple[int, int, int]] = (255, 255, 255),
     fill_color: Optional[Tuple[int, int, int]] = (128, 128, 128),
     background_color: Optional[Tuple[int, int, int]] = None,
@@ -284,9 +314,9 @@ def draw(  # pylint: disable=too-many-locals,too-many-arguments
     length_increment: float = 5,
     length_scalar: float = 2,
     thickness_increment: float = 1,
-    red_increment: int = 4,
-    green_increment: int = 4,
-    blue_increment: int = 4,
+    red_increment: int = 1,
+    green_increment: int = 1,
+    blue_increment: int = 1,
     scale: float = 1,
     prefix: str = '',
     suffix: str = '',
@@ -303,10 +333,9 @@ def draw(  # pylint: disable=too-many-locals,too-many-arguments
     padding: Optional[int] = 10,
     draws_per_frame: int = 1,
     output_scale: float = 1,
-    antialiasing: int = 1,
+    antialiasing: int = 4,
     transparent: bool = False,
-    ghostscript: Optional[str] = None,
-    tmp_dir: Optional[str] = None
+    tmpdir: Optional[str] = None
 ) -> Optional[Tuple[str, Tuple[float, float], float]]:
     """TODO docstring"""
     if _FINISHED:
@@ -330,6 +359,7 @@ def draw(  # pylint: disable=too-many-locals,too-many-arguments
         t.showturtle()
     else:
         t.hideturtle()
+    position = scale * position[0], scale * position[1]
     orient(t, position, heading)
 
     string = prefix + lsystem(start, make_rules(rules), level) + suffix
@@ -337,13 +367,12 @@ def draw(  # pylint: disable=too-many-locals,too-many-arguments
 
     with ExitStack() as exit_stack:
         if png or gif:
-            ghostscript = find_ghostscript(ghostscript)
-            if tmp_dir:
-                path = pathlib.Path(tmp_dir).resolve()
+            if tmpdir:
+                path = pathlib.Path(tmpdir).resolve()
                 path.mkdir(parents=True, exist_ok=True)
-                tmp_dir = str(path)
+                tmpdir = str(path)
             else:
-                tmp_dir = exit_stack.enter_context(TemporaryDirectory())
+                tmpdir = exit_stack.enter_context(TemporaryDirectory())
 
         run(t=t,  # todo pass in gif and draws_per_frame
             string=string,
@@ -358,41 +387,31 @@ def draw(  # pylint: disable=too-many-locals,too-many-arguments
             thickness_increment=scale*thickness_increment,
             color_increments=(red_increment, green_increment, blue_increment))
 
-        if png:
-            save_png(png, padding, output_scale, antialiasing, transparent, cast(str, ghostscript), cast(str, tmp_dir))
+        if asap:
+            turtle.tracer(saved_tracer, saved_delay)
+            turtle.update()
 
-    if asap:
-        turtle.tracer(saved_tracer, saved_delay)
-        turtle.update()
+        if png:
+            save_png(png, padding, output_scale, antialiasing, transparent, cast(str, tmpdir))
+
     if finished:
         finish(exit_on_click, skip_init)
 
     return string, (t.xcor(), t.ycor()), t.heading()
 
 
-def find_ghostscript(ghostscript: Optional[str]) -> str:
+def save_canvas_png(png: str, scale: float, antialiasing: int, tmpdir: str) -> None:
     """TODO docstring"""
-    if ghostscript:
-        return ghostscript
-    return 'gswin64c'  # TODO do smartly in windows, gs in linux
-
-
-def save_canvas_png(
-    png: str,
-    scale: float,
-    antialiasing: int,
-    ghostscript: str,
-    tmp_dir: str
-) -> Tuple[int, int]:
-    """TODO docstring"""
+    global _GHOSTSCRIPT  # pylint: disable=global-statement
+    _GHOSTSCRIPT = guess_ghostscript(_GHOSTSCRIPT)  # Re-get ghostscript just in case init was never called.
     dpi = round(DPI * scale)
-    eps = str(pathlib.Path(tmp_dir) / f'{EPS_NAME}{EPS_EXT}')
+    eps = str(pathlib.Path(tmpdir) / f'{EPS_NAME}{EPS_EXT}')
     canvas = turtle.getcanvas()
     width = max(canvas.winfo_width(), canvas.canvwidth)  # type: ignore
     height = max(canvas.winfo_height(), canvas.canvheight)  # type: ignore
     canvas.postscript(file=eps, x=-width//2, y=-height//2, width=width, height=height)  # type: ignore
     width, height = round(scale * width), round(scale * height)
-    result = subprocess.run([ghostscript,
+    result = subprocess.run([_GHOSTSCRIPT,
                              '-q',
                              '-dSAFER',
                              '-dBATCH',
@@ -401,22 +420,23 @@ def save_canvas_png(
                              '-sDEVICE=pngalpha',
                              f'-r{dpi}',
                              f'-g{width}x{height}',
-                             f'-dGraphicsAlphaBits={antialiasing}', f'-sOutputFile="{png}"', f'"{eps}"'],
+                             f'-dGraphicsAlphaBits={antialiasing}',
+                             f'-sOutputFile="{png}"',
+                             eps],
                             check=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding='utf-8')
     if result.returncode:
         print(result.stdout)
-    return width, height
 
 
 # todo slow so give messages
-def pad_image(image: Image.Image, padding: int, background_rgba: Tuple[int, int, int, int]) -> Image.Image:
+def pad_image(image: Image.Image, padding: int) -> Image.Image:
     """TODO docstring"""
     x_min, y_min, x_max, y_max = image.width - 1, image.height - 1, 0, 0
     data = image.load()
     empty = True
     for y in range(image.height):
         for x in range(image.width):
-            if data[x, y] != background_rgba:
+            if data[x, y][3] != 0:
                 empty = False
                 x_min = min(x_min, x)
                 y_min = min(y_min, y)
@@ -427,32 +447,26 @@ def pad_image(image: Image.Image, padding: int, background_rgba: Tuple[int, int,
         y_min = y_max = image.height//2
     x_min -= padding
     y_min -= padding
-    x_max = max(x_max + padding, x_min) + 1
-    y_max = max(y_max + padding, y_min) + 1
-    return image.crop((x_min, y_min, x_max, y_max))
+    x_max = max(x_max + padding, x_min)
+    y_max = max(y_max + padding, y_min)
+    return image.crop((x_min, y_min, x_max + 1, y_max + 1))
 
 
-def save_png(  # pylint: disable=too-many-arguments
-    png: str,
-    padding: Optional[int],
-    scale: float,
-    antialiasing: int,
-    transparent: bool,
-    ghostscript: str,
-    tmp_dir: str
-) -> None:
+def save_png(
+        png: str, padding: Optional[int], scale: float, antialiasing: int, transparent: bool, tmpdir: str) -> None:
     """TODO docstring"""
     png = str(pathlib.Path(png).resolve().with_suffix(PNG_EXT))
-    width, height = save_canvas_png(png, scale, antialiasing, ghostscript, tmp_dir)
-    saved = Image.open(png).convert('RGBA')
+    save_canvas_png(png, scale, antialiasing, tmpdir)
+    image = Image.open(png).convert('RGBA')
+    if padding is not None:
+        image = pad_image(image, round(scale * padding))
+
     r, g, b = turtle.bgcolor()
     background_rgba = (int(r), int(g), int(b)) + ((0,) if transparent else (255,))
-    background = Image.new('RGBA', (width, height), background_rgba)
-    image = Image.alpha_composite(background, saved)
-    saved.close()
-    if padding is not None:
-        image = pad_image(image, padding, background_rgba)
-    image.save(png)
+    background = Image.new('RGBA', image.size, background_rgba)
+    final = Image.alpha_composite(background, image)
+    image.close()
+    final.save(png)
 
 
 def finish(exit_on_click: bool = True, skip_init: bool = False) -> None:
@@ -466,8 +480,10 @@ def finish(exit_on_click: bool = True, skip_init: bool = False) -> None:
 
 
 if __name__ == '__main__':
-    init()
-    draw(png='test.png', finished=False, color=(255, 0, 0), background_color=(20, 20, 20), transparent=False,
-         antialiasing=1, output_scale=1, show_turtle=False)
+    init((600, 600), ghostscript='gswin64c')
+    draw("F-G-G", "F F-G+F+G-F G ,GG", 120, 16, 1, 5, heading=30, position=(-250, 0), png='tri',
+         padding=10, finished=True, asap=True, scale=1, output_scale=3, transparent=True)
+    # draw(png='test.png', finished=False, color=(255, 0, 0), background_color=(20, 20, 20), transparent=False,
+    #      antialiasing=1, scale=.4, show_turtle=False)
     # draw(png='test.png', finished=False, color=(255, 9, 0))
-    finish()
+    # finish()
