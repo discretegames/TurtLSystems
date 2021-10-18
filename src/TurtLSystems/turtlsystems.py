@@ -86,7 +86,9 @@ def orient(t: turtle.Turtle, position: Tuple[float, float], heading: float) -> N
 
 
 def guess_ghostscript(ghostscript: Optional[str] = None) -> str:
-    """Guess the path to ghostscript if it's not already set. Only robust on Windows."""
+    """Guess the path to ghostscript if it's not already set. Only guesses well on Windows.
+    Should prevent people from needing to add ghostscript to PATH.
+    """
     if ghostscript:
         return ghostscript
     if os.name != 'nt':
@@ -107,7 +109,7 @@ def guess_ghostscript(ghostscript: Optional[str] = None) -> str:
     return 'gswin64c'  # Last ditch guess.
 
 
-def init(  # pylint: disable=too-many-arguments
+def init(  # pylint: disable=too-many-arguments,too-many-locals
     window_size: Tuple[Union[int, float], Union[int, float]] = (0.75, 0.75),
     window_title: str = "TurtLSystems",
     background_color: Tuple[int, int, int] = (0, 0, 0),
@@ -117,8 +119,6 @@ def init(  # pylint: disable=too-many-arguments
     delay: int = 0,
     mode: str = 'standard',
     ghostscript: Optional[str] = None
-
-
 ) -> None:
     """TODO docstring"""
     if _FINISHED:
@@ -428,9 +428,9 @@ def save_canvas_png(png: str, scale: float, antialiasing: int, tmpdir: str) -> N
         print(result.stdout)
 
 
-# todo slow so give messages
 def pad_image(image: Image.Image, padding: int) -> Image.Image:
     """TODO docstring"""
+    print(f'Padding {image.width}x{image.height} pixel image...')
     x_min, y_min, x_max, y_max = image.width - 1, image.height - 1, 0, 0
     data = image.load()
     empty = True
@@ -452,10 +452,10 @@ def pad_image(image: Image.Image, padding: int) -> Image.Image:
     return image.crop((x_min, y_min, x_max + 1, y_max + 1))
 
 
-def save_png(
+def save_png(  # pylint: disable=too-many-arguments
         png: str, padding: Optional[int], scale: float, antialiasing: int, transparent: bool, tmpdir: str) -> None:
     """TODO docstring"""
-    png = str(pathlib.Path(png).resolve().with_suffix(PNG_EXT))
+    png = str(pathlib.Path(png).with_suffix(PNG_EXT).resolve())
     save_canvas_png(png, scale, antialiasing, tmpdir)
     image = Image.open(png).convert('RGBA')
     if padding is not None:
@@ -467,6 +467,7 @@ def save_png(
     final = Image.alpha_composite(background, image)
     image.close()
     final.save(png)
+    print(f'Saved "{png}".')
 
 
 def finish(exit_on_click: bool = True, skip_init: bool = False) -> None:
@@ -480,9 +481,9 @@ def finish(exit_on_click: bool = True, skip_init: bool = False) -> None:
 
 
 if __name__ == '__main__':
-    init((600, 600), ghostscript='gswin64c')
+    init((600, 600), ghostscript='')
     draw("F-G-G", "F F-G+F+G-F G ,GG", 120, 16, 1, 5, heading=30, position=(-250, 0), png='tri',
-         padding=10, finished=True, asap=True, scale=1, output_scale=3, transparent=True)
+         padding=None, finished=True, asap=True, scale=1, output_scale=1, transparent=True)
     # draw(png='test.png', finished=False, color=(255, 0, 0), background_color=(20, 20, 20), transparent=False,
     #      antialiasing=1, scale=.4, show_turtle=False)
     # draw(png='test.png', finished=False, color=(255, 9, 0))
