@@ -58,7 +58,10 @@ _			reset line length back to initial value
 ~			reset turning angle back to initial value
 #			next color op (0-9 ,.;:!?) applies to fill color rather than pen color
 `			make next a-z draw or A-Z not draw, toggle
-$			stop everything immediately
+\			stop everything immediately
+$			clear stack
+'			reset heading
+"			reset position
 .,			increase/decrease red by red delta (does not affect color list)
 :;			green
 !?			blue

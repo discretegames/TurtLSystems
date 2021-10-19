@@ -195,6 +195,8 @@ def draw(
                        string=string,
                        colors=make_colors(color, fill_color, colors),
                        full_circle=full_circle,
+                       position=position,
+                       heading=heading,
                        angle=angle,
                        length=scale*length,
                        thickness=scale*thickness,
@@ -303,14 +305,16 @@ def make_drawdir(tmpdir: str) -> Path:
     return drawdir
 
 
-def orient(t: turtle.Turtle, position: Tuple[float, float], heading: float) -> None:
+def orient(t: turtle.Turtle, position: Optional[Tuple[float, float]], heading: Optional[float]) -> None:
     """Silently orients turtle `t` to given `position` and `heading`."""
     speed = t.speed()
     down = t.isdown()
     t.penup()
     t.speed(0)
-    t.setposition(position)
-    t.setheading(heading)
+    if position:
+        t.setposition(position)
+    if heading is not None:
+        t.setheading(heading)
     t.speed(speed)
     if down:
         t.pendown()
@@ -473,6 +477,8 @@ def run(  # pylint: disable=too-many-branches,too-many-statements
     string: str,
     colors: Tuple[OpColor, ...],
     full_circle: float,
+    position: Tuple[float, float],
+    heading: float,
     angle: float,
     length: float,
     thickness: float,
@@ -620,6 +626,12 @@ def run(  # pylint: disable=too-many-branches,too-many-statements
             gif_handler()
         elif c == '`':
             swap_cases = not swap_cases
+        elif c == '"':
+            orient(t, position, None)
+        elif c == "'":
+            orient(t, None, heading)
+        elif c == '$':
+            stack.clear()
         elif c == '[':
             stack.append(State((t.xcor(), t.ycor()), t.heading(), angle, length, thickness,
                                pen_color, fill_color, swap_signs, swap_cases, modify_fill))
@@ -630,7 +642,7 @@ def run(  # pylint: disable=too-many-branches,too-many-statements
                 angle, length = state.angle, state.length
                 swap_signs, swap_cases, modify_fill = state.swap_signs, state.swap_cases, state.modify_fill
                 pen_color, fill_color = state.pen_color, state.fill_color
-        elif c == '$':
+        elif c == '\\':
             break
 
     if gif:
@@ -643,9 +655,9 @@ def run(  # pylint: disable=too-many-branches,too-many-statements
 
 if __name__ == '__main__':
     init((600, 600))
-    draw('A', 'A 0B-2A-3B B 4A+5B+6A', 60, 8, 5, 2, heading=150, position=(200, 00), red_increment=-2,
+    draw('A', 'A 0B-2"A-3B B 4A+"5B+6A', 60, 8, 5, 2, heading=150, position=(200, 00), red_increment=-2,
          color=None,
-         png='colors', max_frames=500, draws_per_frame=10, alternate=False, thickness_increment=2,
+         png='', max_frames=500, draws_per_frame=10, alternate=False, thickness_increment=2,
          padding=10,  speed=10, asap=False, reverse=False, tmpdir='', show_turtle=False,
          turtle_shape='turtle', duration=30, output_scale=2)
 
