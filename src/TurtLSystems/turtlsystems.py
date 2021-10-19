@@ -608,10 +608,12 @@ def finish(exit_on_click: bool = True, skip_init: bool = False) -> None:
 
 
 if __name__ == '__main__':
-    init((600, 600), background_color=(40, 40, 40))
+    init((600, 600), background_color=(36, 8, 107))
     st = "F-G-G"
-    ru = "F {F-G+F+G}-F G GG"
+    ru = "F {F-G+F+G-F G @GG"
+    draw('A', 'A B-A-B B A+B+A.', 60, 8, 5, 2, heading=150, position=(200, 00),
+         color=(200, 220, 255), fill_color=(255, 255, 255), red_increment=-2,
+         gif='tri', max_frames=500, draws_per_frame=1, alternate=False,
+         padding=10, fin=True, speed=10, asap=False, reverse=False, tmpdir='', show_turtle=False,
+         turtle_shape='turtle', duration=30)
 
-    draw(st, ru, 120, 20, 4, heading=30, position=(-255, 0), delay=1000,
-         gif='test', max_frames=200, draws_per_frame=10, wait=0, alternate=False,
-         padding=10, fin=False, asap=True, reverse=False, tmpdir='')
