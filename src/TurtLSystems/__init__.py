@@ -1,6 +1,6 @@
-"""This is the TurtLSystems Python 3 package (https://pypi.org/project/TurtLSystems), an educational
-code toy for creating Lindenmayer system (L-systems) fractals and patterns via turtle graphics."""
+"""This is the turtlsystems Python package (https://pypi.org/project/turtlsystems), a tool and educational
+code toy for generating images and animations of Lindenmayer system (L-system) patterns via turtle graphics."""
 
 # pylint: disable=invalid-name
-from TurtLSystems.turtlsystems import init, draw, finish
+from turtlsystems.turtlsystems import init, draw, finish
 __all__ = ['init', 'draw', 'finish']

@@ -1,15 +1,15 @@
-"""Package setup file for TurtLSystems Python 3 package (https://pypi.org/project/TurtLSystems)."""
+"""Package setup file for turtlsystems Python 3 package (https://pypi.org/project/turtlsystems)."""
 
-from setuptools import setup, find_packages
 from pathlib import Path
+from setuptools import setup, find_packages
 
-VERSION = "0.0.3"
+VERSION = "0.0.4"
 
 with open(Path(__file__).with_name('README.md'), encoding='utf-8') as file:
     long_description = file.read()
 
-setup(name='TurtLSystems', version=VERSION, author='discretegames',
-      url='https://github.com/discretegames/TurtLSystems',
+setup(name='turtlsystems', version=VERSION, author='discretegames',
+      url='https://github.com/discretegames/turtlsystems',
       long_description=long_description,
       long_description_content_type="text/markdown",
       packages=find_packages('src'),

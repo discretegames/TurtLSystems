@@ -1,9 +1,4 @@
 
-# from TurtLSystems import *
-
-# t.done()
-# t.done()
-
 # def koch1(level=4, angle=90):
 #     start = 'F'
 #     rules = {'F': 'F+F-F-F+F'}

@@ -1,4 +1,4 @@
-"""The core code of the TurtLSystems Python 3 package (https://pypi.org/project/TurtLSystems)."""
+"""Core source code of turtlsystems Python 3 package (https://pypi.org/project/turtlsystems)."""
 
 import os
 import turtle
@@ -616,4 +616,3 @@ if __name__ == '__main__':
          gif='tri', max_frames=500, draws_per_frame=1, alternate=False,
          padding=10, fin=True, speed=10, asap=False, reverse=False, tmpdir='', show_turtle=False,
          turtle_shape='turtle', duration=30)
-
