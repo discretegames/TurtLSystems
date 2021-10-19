@@ -34,7 +34,7 @@ DPI = 96
 # Mutating globals:
 _DRAW_NUMBER = 0
 _INITIALIZED = _WAITED = _SILENT = False
-_GHOSTSCRIPT: Optional[str] = None
+_GHOSTSCRIPT = ''
 
 
 # Dataclasses are not in 3.6 and SimpleNamespace is not typed properly so decided to use a plain class for State.
@@ -83,12 +83,12 @@ def init(
     silent: bool = False
 ) -> None:
     """TODO docstring"""
-    global _GHOSTSCRIPT, _SILENT, _INITIALIZED
+    global _SILENT, _GHOSTSCRIPT, _INITIALIZED
     _SILENT = silent
     if _WAITED:
         message('Did not init() because wait() was already called.')
         return
-    _GHOSTSCRIPT = guess_ghostscript(ghostscript)
+    _GHOSTSCRIPT = ghostscript or ''
     window_w, window_h = window_size
     window_x, window_y = window_position
     turtle.setup(window_w, window_h, window_x, window_y)
@@ -153,7 +153,7 @@ def draw(
     alternate: bool = False,
     optimize: bool = True,
     tmpdir: Optional[str] = None
-) -> Optional[Tuple[str, Tuple[float, float], float]]:
+) -> Optional[Tuple[str, turtle.Turtle]]:
     """TODO docstring"""
     global _DRAW_NUMBER
     _DRAW_NUMBER += 1
@@ -190,6 +190,10 @@ def draw(
                 tmpdir = exit_stack.enter_context(TemporaryDirectory())
                 save_gif_pngs = False
             drawdir = make_drawdir(tmpdir)
+            global _GHOSTSCRIPT
+            if not _GHOSTSCRIPT:
+                _GHOSTSCRIPT = guess_ghostscript()
+                message(f'Guessed ghostscript to be "{_GHOSTSCRIPT}".')
 
         gif_data = run(t=t,
                        string=string,
@@ -211,20 +215,26 @@ def draw(
                        drawdir=drawdir if gif else None)
         if png:
             eps = str((drawdir / FINAL_NAME).with_suffix(EPS_EXT))
-            png, _, _ = save_png(png, eps, save_eps(eps), output_scale, antialiasing,
-                                 get_background_color(), padding, transparent)
-            message(f'Saved png "{png}".')
+            try:
+                png, _, _ = save_png(png, eps, save_eps(eps), output_scale, antialiasing,
+                                     get_background_color(), padding, transparent)
+                message(f'Saved png "{png}".')
+            except Exception as e:  # pylint: disable=broad-except
+                message('Unable to save png:', e)
 
         if gif:
-            gif = save_gif(gif, gif_data, output_scale, antialiasing, padding, transparent,
-                           duration, hold, delay, loops, reverse, alternate, optimize, save_gif_pngs)
-            message(f'Saved gif "{gif}".')
+            try:
+                gif = save_gif(gif, gif_data, output_scale, antialiasing, padding, transparent,
+                               duration, hold, delay, loops, reverse, alternate, optimize, save_gif_pngs)
+                message(f'Saved gif "{gif}".')
+            except Exception as e:  # pylint: disable=broad-except
+                message('Unable to save gif:', e)
 
         if asap:
             turtle.tracer(saved_tracer, saved_delay)
             turtle.update()
 
-    return string, (t.xcor(), t.ycor()), t.heading()
+    return string, t
 
 
 def wait(exit_on_click: bool = True, *, skip_init: bool = False) -> None:
@@ -320,12 +330,10 @@ def orient(t: turtle.Turtle, position: Optional[Tuple[float, float]], heading: O
         t.pendown()
 
 
-def guess_ghostscript(ghostscript: Optional[str] = None) -> str:
-    """Guess the path to ghostscript if it's not already set. Only guesses well on Windows.
+def guess_ghostscript() -> str:
+    """Guess the path to ghostscript. Only guesses well on Windows.
     Should prevent people from needing to add ghostscript to PATH.
     """
-    if ghostscript:
-        return ghostscript
     if os.name != 'nt':
         return 'gs'  # I'm not sure where to look on non-Windows OSes so just guess "gs".
     locations = "C:\\Program Files\\gs", "C:\\Program Files (x86)\\gs"
@@ -339,18 +347,15 @@ def guess_ghostscript(ghostscript: Optional[str] = None) -> str:
                 for file in files:
                     exe = v / 'bin' / file
                     if exe.exists():
-                        message(f'Found ghostscript at "{exe}".')
                         return str(exe)
     return 'gswin64c'  # Last ditch guess.
 
 
 def eps_to_png(eps: str, png: str, size: Tuple[int, int], output_scale: float, antialiasing: int) -> None:
     """TODO docstring"""
-    global _GHOSTSCRIPT
-    _GHOSTSCRIPT = guess_ghostscript(_GHOSTSCRIPT)  # Re-get ghostscript just in case init was never called.
     result = subprocess.run([_GHOSTSCRIPT,
-                             '-q',
-                            '-dSAFER',
+                            '-q',
+                             '-dSAFER',
                              '-dBATCH',
                              '-dNOPAUSE',
                              '-dEPSCrop',
@@ -363,6 +368,7 @@ def eps_to_png(eps: str, png: str, size: Tuple[int, int], output_scale: float, a
                              eps],
                             check=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding='utf-8')
     if result.returncode:
+        message(f'Ghostscript ({_GHOSTSCRIPT}) exit code {result.returncode}:')
         message(result.stdout)
 
 
@@ -451,7 +457,7 @@ def save_gif(
         _, image, r = save_png(png, eps, size, output_scale, antialiasing,
                                bg, padding, transparent, rect, save_gif_pngs)
         images.append(image)
-        if rect is None:
+        if not i:
             rect = r
             message(f'Making {len(gif_data)} gif frames..', end='', flush=True)
         elif (len(gif_data) - i) % 10 == 0:
@@ -632,6 +638,7 @@ def run(  # pylint: disable=too-many-branches,too-many-statements
             orient(t, None, heading)
         elif c == '$':
             stack.clear()
+            t.clear()
         elif c == '[':
             stack.append(State((t.xcor(), t.ycor()), t.heading(), angle, length, thickness,
                                pen_color, fill_color, swap_signs, swap_cases, modify_fill))
@@ -654,11 +661,10 @@ def run(  # pylint: disable=too-many-branches,too-many-statements
 
 
 if __name__ == '__main__':
-    init((600, 600))
-    draw('A', 'A 0B-2"A-3B B 4A+"5B+6A', 60, 8, 5, 2, heading=150, position=(200, 00), red_increment=-2,
+    init((600, 600), ghostscript='')
+    draw('A', 'A 0B-2A-3B B 4A+5B+6A', 60, 8, 5, 2, heading=150, position=(200, 00), red_increment=-2,
          color=None,
-         png='', max_frames=500, draws_per_frame=10, alternate=False, thickness_increment=2,
-         padding=10,  speed=10, asap=False, reverse=False, tmpdir='', show_turtle=False,
+         png='', max_frames=500, draws_per_frame=20, alternate=False, thickness_increment=2,
+         padding=None,  speed=10, asap=False, reverse=False, tmpdir='', show_turtle=False,
          turtle_shape='turtle', duration=30, output_scale=2)
-
     wait()
