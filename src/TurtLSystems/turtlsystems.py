@@ -4,7 +4,7 @@ import os
 import turtle
 import subprocess
 from pathlib import Path
-from typing import List, Dict, Tuple, Iterable, Optional, Union, cast
+from typing import Any, List, Dict, Tuple, Iterable, Optional, Union, cast
 from tempfile import TemporaryDirectory
 from contextlib import ExitStack
 from PIL import Image
@@ -33,8 +33,15 @@ DPI = 96
 
 _DRAW_NUMBER = 0
 _INITIALIZED = False
-_FINISHED = False
+_WAITED = False
 _GHOSTSCRIPT: Optional[str] = None
+_SILENT = False
+
+
+def message(*args: Any, **kwargs: Any) -> None:
+    """Alias for `print` but only runs when not silenced."""
+    if not _SILENT:
+        print(*args, **kwargs)
 
 
 def clamp(value: int, minimum: int = 0, maximum: int = 255) -> int:
@@ -123,7 +130,7 @@ def guess_ghostscript(ghostscript: Optional[str] = None) -> str:
                 for file in files:
                     exe = v / 'bin' / file
                     if exe.exists():
-                        print(f'Found ghostscript at "{exe}".')
+                        message(f'Found ghostscript at "{exe}".')
                         return str(exe)
     return 'gswin64c'  # Last ditch guess.
 
@@ -137,12 +144,16 @@ def init(
     canvas_size: Tuple[Optional[int], Optional[int]] = (None, None),
     delay: int = 0,
     mode: str = 'standard',
-    ghostscript: Optional[str] = None
+    ghostscript: Optional[str] = None,
+    silent: bool = False
 ) -> None:
     """TODO docstring"""
-    if _FINISHED:
-        print('Did not init() because finish() was already called.')
+    global _GHOSTSCRIPT, _SILENT, _INITIALIZED
+    _SILENT = silent
+    if _WAITED:
+        message('Did not init() because wait() was already called.')
         return
+    _GHOSTSCRIPT = guess_ghostscript(ghostscript)
     window_w, window_h = window_size
     window_x, window_y = window_position
     turtle.setup(window_w, window_h, window_x, window_y)
@@ -158,8 +169,6 @@ def init(
     turtle.colormode(255)
     turtle.bgcolor(color_tuple(background_color))
     turtle.bgpic(background_image)
-    global _GHOSTSCRIPT, _INITIALIZED
-    _GHOSTSCRIPT = guess_ghostscript(ghostscript)
     _INITIALIZED = True
 
 
@@ -342,7 +351,7 @@ def run(  # pylint: disable=too-many-branches,too-many-statements
     if gif:
         if draws % draws_per_frame != 0:
             save_frame()  # Save frame of final changes unless nothing has changed.
-        print(f'Prepped {len(gif_data)} gif frames of {frames_attempted} attempted for {draws + 1} draws.')
+        message(f'Prepped {len(gif_data)} gif frames of {frames_attempted} attempted for {draws + 1} draws.')
 
     return gif_data
 
@@ -376,7 +385,6 @@ def draw(
     show_turtle: bool = False,
     turtle_shape: str = 'classic',
     full_circle: float = 360,
-    fin: bool = True,
     exit_on_click: bool = True,
     skip_init: bool = False,
     png: Optional[str] = None,
@@ -388,7 +396,7 @@ def draw(
     draws_per_frame: int = 1,
     max_frames: int = 100,
     duration: int = 20,
-    wait: int = 500,
+    hold: int = 500,
     delay: int = 0,
     loops: Optional[int] = None,
     reverse: bool = False,
@@ -399,8 +407,8 @@ def draw(
     """TODO docstring"""
     global _DRAW_NUMBER
     _DRAW_NUMBER += 1
-    if _FINISHED:
-        print('Did not draw() because finish() was already called.')
+    if _WAITED:
+        message('Did not draw() because wait() was already called.')
         return None
 
     if not skip_init and not _INITIALIZED:
@@ -454,19 +462,16 @@ def draw(
             eps = str((drawdir / FINAL_NAME).with_suffix(EPS_EXT))
             png, _, _ = save_png(png, eps, save_eps(eps), output_scale, antialiasing,
                                  get_background_color(), padding, transparent)
-            print(f'Saved png "{png}".')
+            message(f'Saved png "{png}".')
 
         if gif:
             gif = save_gif(gif, gif_data, output_scale, antialiasing, padding, transparent,
-                           duration, wait, delay, loops, reverse, alternate, optimize, save_gif_pngs)
-            print(f'Saved gif "{gif}".')
+                           duration, hold, delay, loops, reverse, alternate, optimize, save_gif_pngs)
+            message(f'Saved gif "{gif}".')
 
         if asap:
             turtle.tracer(saved_tracer, saved_delay)
             turtle.update()
-
-    if fin:
-        finish(exit_on_click, skip_init)
 
     return string, (t.xcor(), t.ycor()), t.heading()
 
@@ -534,10 +539,10 @@ def save_gif(
         images.append(image)
         if rect is None:
             rect = r
-            print(f'Making {len(gif_data)} gif frames..', end='', flush=True)
+            message(f'Making {len(gif_data)} gif frames..', end='', flush=True)
         elif (len(gif_data) - i) % 10 == 0:
-            print(f'{len(gif_data) - i}..', end='', flush=True)
-    print('.')
+            message(f'{len(gif_data) - i}..', end='', flush=True)
+    message('.')
     if not reverse:
         images.reverse()  # Reversing here puts it back in proper order.
     if alternate:
@@ -570,12 +575,12 @@ def eps_to_png(eps: str, png: str, size: Tuple[int, int], output_scale: float, a
                              eps],
                             check=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding='utf-8')
     if result.returncode:
-        print(result.stdout)
+        message(result.stdout)
 
 
 def get_padding_rect(image: Image.Image, padding: int) -> Tuple[int, int, int, int]:
     """TODO docstring"""
-    print(f'Padding {image.width}x{image.height} pixel image...')
+    message(f'Padding {image.width}x{image.height} pixel image...')
     x_min, y_min, x_max, y_max = image.width - 1, image.height - 1, 0, 0
     data = image.load()
     empty = True
@@ -597,13 +602,18 @@ def get_padding_rect(image: Image.Image, padding: int) -> Tuple[int, int, int, i
     return x_min, y_min, x_max, y_max
 
 
-def finish(exit_on_click: bool = True, skip_init: bool = False) -> None:
-    """Finish drawing and keep window open. Only needed if all calls to `draw` specified `fin=False`."""
+def wait(exit_on_click: bool = True, *, skip_init: bool = False) -> None:
+    """Use `wait()` after all calls to `draw(...)` to keep the window open.
+
+    Args:
+        `exit_on_click=True` (bool): Whether the window can be closed by clicking anywhere.
+        `skip_init=False` (bool): For advanced use. Whether to skip calling `init`.
+    """
     if not skip_init and not _INITIALIZED:
         init()
-    global _FINISHED
-    if not _FINISHED:
-        _FINISHED = True
+    global _WAITED
+    if not _WAITED:
+        _WAITED = True
         (turtle.exitonclick if exit_on_click else turtle.done)()
 
 
@@ -613,6 +623,7 @@ if __name__ == '__main__':
     ru = "F {F-G+F+G-F G @GG"
     draw('A', 'A B-A-B B A+B+A.', 60, 8, 5, 2, heading=150, position=(200, 00),
          color=(200, 220, 255), fill_color=(255, 255, 255), red_increment=-2,
-         gif='tri', max_frames=500, draws_per_frame=1, alternate=False,
-         padding=10, fin=True, speed=10, asap=False, reverse=False, tmpdir='', show_turtle=False,
+         gif='tri', max_frames=500, draws_per_frame=10, alternate=False,
+         padding=10,  speed=10, asap=False, reverse=False, tmpdir='', show_turtle=False,
          turtle_shape='turtle', duration=30)
+    wait()
