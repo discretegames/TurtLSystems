@@ -56,11 +56,12 @@ f	         Move forward by line length without drawing a line
 _			reset line length back to initial value
 =			reset line width back to initial value
 ~			reset turning angle back to initial value
-#			next color op (0-9 ,.;:!? applies to fill color rather than pen color)
-(space, any other chars) 	ignored
-`			clear stack
+#			next color op (0-9 ,.;:!?) applies to fill color rather than pen color
+`			make next a-z draw or A-Z not draw, toggle
 $			stop everything immediately
-,.			increase/decrease red by red delta (does not affect color list)
-;:			green
-?!			blue
+.,			increase/decrease red by red delta (does not affect color list)
+:;			green
+!?			blue
+(space, any other chars) 	ignored
 ```
+commands inspired by <http://paulbourke.net/fractals/lsys>

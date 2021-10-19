@@ -4,14 +4,17 @@ import os
 import turtle
 import subprocess
 from pathlib import Path
-from typing import Any, List, Dict, Tuple, Iterable, Optional, Union, cast
+from typing import Any, List, Dict, Tuple, Iterable, Sequence, Optional, Union, cast
 from tempfile import TemporaryDirectory
 from contextlib import ExitStack
 from PIL import Image
 from packaging import version
 
+# Types:
 Color = Tuple[int, int, int]
+OpColor = Optional[Color]
 
+# Globals:
 DEFAULT_COLORS = (
     (255, 255, 255),
     (128, 128, 128),
@@ -24,22 +27,17 @@ DEFAULT_COLORS = (
     (128, 0, 255),
     (255, 0, 255),
 )
-PNG_EXT = '.png'
-GIF_EXT = '.gif'
-EPS_EXT = '.eps'
-FINAL_NAME = 'final'
-FRAME_NAME = 'frame{}'
-DRAW_DIR_NAME = 'draw{}'
+PNG_EXT, GIF_EXT, EPS_EXT = '.png', '.gif', '.eps'
+FINAL_NAME, FRAME_NAME, DRAW_DIR_NAME = 'final', 'frame{}', 'draw{}'
 DPI = 96
 
+# Mutating globals:
 _DRAW_NUMBER = 0
-_INITIALIZED = False
-_WAITED = False
+_INITIALIZED = _WAITED = _SILENT = False
 _GHOSTSCRIPT: Optional[str] = None
-_SILENT = False
 
 
-# Dataclasses not in 3.6 and SimpleNamespace is not typed properly so use plain class for State.
+# Dataclasses are not in 3.6 and SimpleNamespace is not typed properly so decided to use a plain class for State.
 class State:  # pylint: disable=too-many-instance-attributes,too-few-public-methods
     """L-system state."""
 
@@ -49,9 +47,10 @@ class State:  # pylint: disable=too-many-instance-attributes,too-few-public-meth
         heading: float, angle: float,
         length: float,
         thickness: float,
-        pen_color: Tuple[int, int, int],
-        fill_color: Tuple[int, int, int],
+        pen_color: OpColor,
+        fill_color: OpColor,
         swap_signs: bool,
+        swap_cases: bool,
         modify_fill: bool
     ) -> None:
         self.position = position
@@ -62,10 +61,13 @@ class State:  # pylint: disable=too-many-instance-attributes,too-few-public-meth
         self.pen_color = pen_color
         self.fill_color = fill_color
         self.swap_signs = swap_signs
-        self.change_fill = modify_fill
+        self.swap_cases = swap_cases
+        self.modify_fill = modify_fill
 
 
-# Package Functions:
+#####################
+# Package Functions #
+#####################
 
 
 def init(
@@ -116,7 +118,7 @@ def draw(
     fill_color: Optional[Tuple[int, int, int]] = (128, 128, 128),
     background_color: Optional[Tuple[int, int, int]] = None,
     *,
-    colors: Iterable[Tuple[int, int, int]] = DEFAULT_COLORS,
+    colors: Optional[Iterable[Optional[Tuple[int, int, int]]]] = None,
     position: Tuple[float, float] = (0, 0),
     heading: float = 0,
     angle_increment: float = 15,
@@ -180,7 +182,6 @@ def draw(
     orient(t, position, heading)
 
     string = prefix + lsystem(start, make_rules(rules), level) + suffix
-    colors = make_colors(color, fill_color, colors)
 
     with ExitStack() as exit_stack:
         if png or gif:
@@ -192,7 +193,7 @@ def draw(
 
         gif_data = run(t=t,
                        string=string,
-                       colors=colors,
+                       colors=make_colors(color, fill_color, colors),
                        full_circle=full_circle,
                        angle=angle,
                        length=scale*length,
@@ -239,7 +240,9 @@ def wait(exit_on_click: bool = True, *, skip_init: bool = False) -> None:
         (turtle.exitonclick if exit_on_click else turtle.done)()
 
 
-# Helper Functions:
+####################
+# Helper Functions #
+####################
 
 
 def message(*args: Any, **kwargs: Any) -> None:
@@ -248,15 +251,29 @@ def message(*args: Any, **kwargs: Any) -> None:
         print(*args, **kwargs)
 
 
+def lsystem(start: str, rules: Dict[str, str], level: int) -> str:
+    """Iterates L-system initialzed to `start` based on `rules` `level` number of times."""
+    for _ in range(level):
+        start = ''.join(rules.get(c, c) for c in start)
+    return start
+
+
 def clamp(value: int, minimum: int = 0, maximum: int = 255) -> int:
     """Clamps `value` between `minimum` and `maximum`."""
     return max(minimum, min(value, maximum))
 
 
-def color_tuple(color: Iterable[int]) -> Tuple[int, int, int]:
-    """Converts `color` to tuple with clamped rgb."""
-    r, g, b = zip(color, range(3))
-    return clamp(r[0]), clamp(g[0]), clamp(b[0])
+def conform_color(color: Optional[Sequence[int]]) -> OpColor:
+    """Ensures `color` is a tuple with 0-255 clamped rgb."""
+    if color:
+        return clamp(int(color[0])), clamp(int(color[1])), clamp(int(color[2]))
+    return None
+
+
+def get_background_color() -> Color:
+    """Returns current turtle graphics background color. Assumes it's a 0-255 rgb tuple."""
+    r, g, b = turtle.bgcolor()
+    return int(r), int(g), int(b)
 
 
 def make_rules(rules: Union[str, Dict[str, str]]) -> Dict[str, str]:
@@ -267,16 +284,13 @@ def make_rules(rules: Union[str, Dict[str, str]]) -> Dict[str, str]:
     return rules
 
 
-def make_colors(color: Optional[Tuple[int, int, int]], fill_color: Optional[Tuple[int, int, int]],
-                colors: Iterable[Tuple[int, int, int]]) -> List[Tuple[int, int, int]]:
-    """Creates colors list."""
-    colors = list(map(color_tuple, colors))
+def make_colors(color: OpColor, fill_color: OpColor, colors: Optional[Iterable[OpColor]]) -> Tuple[OpColor, ...]:
+    """Creates final colors tuple."""
+    if colors is None:
+        return conform_color(color), conform_color(fill_color), *DEFAULT_COLORS[2:]
+    colors = [conform_color(c) for c, _ in zip(colors, range(len(DEFAULT_COLORS)))]
     colors.extend(DEFAULT_COLORS[len(colors):])
-    if color:
-        colors[0] = color_tuple(color)
-    if fill_color:
-        colors[1] = color_tuple(fill_color)
-    return colors
+    return tuple(colors)
 
 
 def make_drawdir(tmpdir: str) -> Path:
@@ -287,19 +301,6 @@ def make_drawdir(tmpdir: str) -> Path:
         if file.is_file():
             file.unlink(missing_ok=True)
     return drawdir
-
-
-def lsystem(start: str, rules: Dict[str, str], level: int) -> str:
-    """Iterates L-system initialzed to `start` based on `rules` `level` number of times."""
-    for _ in range(level):
-        start = ''.join(rules.get(c, c) for c in start)
-    return start
-
-
-def get_background_color() -> Tuple[int, int, int]:
-    """Returns current turtle graphics background color. Assumes it's a 0-255 tuple."""
-    r, g, b = turtle.bgcolor()
-    return int(r), int(g), int(b)
 
 
 def orient(t: turtle.Turtle, position: Tuple[float, float], heading: float) -> None:
@@ -401,7 +402,7 @@ def save_png(
     size: Tuple[int, int],
     output_scale: float,
     antialiasing: int,
-    background_color: Tuple[int, int, int],
+    background_color: Color,
     padding: Optional[int],
     transparent: bool,
     rect: Optional[Tuple[int, int, int, int]] = None,
@@ -424,7 +425,7 @@ def save_png(
 
 def save_gif(
     gif: str,
-    gif_data: List[Tuple[str, Tuple[int, int], Tuple[int, int, int]]],
+    gif_data: List[Tuple[str, Tuple[int, int], Color]],
     output_scale: float,
     antialiasing: int,
     padding: Optional[int],
@@ -470,7 +471,7 @@ def run(  # pylint: disable=too-many-branches,too-many-statements
     *,
     t: turtle.Turtle,
     string: str,
-    colors: List[Tuple[int, int, int]],
+    colors: Tuple[OpColor, ...],
     full_circle: float,
     angle: float,
     length: float,
@@ -484,13 +485,13 @@ def run(  # pylint: disable=too-many-branches,too-many-statements
     draws_per_frame: int,
     max_frames: int,
     drawdir: Optional[Path]
-) -> List[Tuple[str, Tuple[int, int], Tuple[int, int, int]]]:
+) -> List[Tuple[str, Tuple[int, int], Color]]:
     """Run turtle `t` on L-system string `string` with given options."""
     initial_angle, initial_length, initial_thickness = angle, length, thickness
-    swap_signs, modify_fill = False, False
+    swap_signs, swap_cases, modify_fill = False, False, False
     pen_color, fill_color = colors[0], colors[1]
     stack: List[State] = []
-    gif_data: List[Tuple[str, Tuple[int, int], Tuple[int, int, int]]] = []
+    gif_data: List[Tuple[str, Tuple[int, int], Color]] = []
     draws, frames_attempted = 0, 0
 
     def save_frame() -> None:
@@ -510,31 +511,44 @@ def run(  # pylint: disable=too-many-branches,too-many-statements
     def set_pensize() -> None:
         t.pensize(max(0, thickness))  # type: ignore
 
-    def set_color(color: Tuple[int, int, int]) -> None:
+    def set_color(color: OpColor) -> None:
         nonlocal pen_color, fill_color, modify_fill
         if modify_fill:
             modify_fill = False
             fill_color = color
-            t.fillcolor(fill_color)
+            if fill_color:
+                t.fillcolor(fill_color)
         else:
             pen_color = color
-            t.pencolor(pen_color)
+            if pen_color:
+                t.pencolor(pen_color)
 
     def increment_color(channel: int, decrement: bool = False) -> None:
-        color = list(fill_color if modify_fill else pen_color)
-        color[channel] += (1 if decrement else -1) * color_increments[channel]
-        set_color(color_tuple(color))
+        color = fill_color if modify_fill else pen_color
+        if color:
+            amount = (-1 if decrement else 1) * color_increments[channel]
+            lst = list(color)
+            lst[channel] = clamp(lst[channel] + amount)
+            set_color((lst[0], lst[1], lst[2]))
 
     set_pensize()
-    t.pencolor(pen_color)
-    t.fillcolor(fill_color)
+    if pen_color:
+        t.pencolor(pen_color)
+    if fill_color:
+        t.fillcolor(fill_color)
     if gif:
         save_frame()
 
     for c in string:
+        if swap_cases and c.isalpha():
+            c = c.lower() if c.isupper() else c.upper()
+
         # Length:
         if 'A' <= c <= 'Z':
-            (t.pendown if t.pensize() else t.penup)()
+            if pen_color and t.pensize():
+                t.pendown()
+            else:
+                t.penup()
             t.forward(length)
             gif_handler()
         elif 'a' <= c <= 'z':
@@ -580,38 +594,41 @@ def run(  # pylint: disable=too-many-branches,too-many-statements
             set_color(colors[int(c)])
         elif c == '#':
             modify_fill = True
-        elif c == ',':
-            increment_color(0)
         elif c == '.':
+            increment_color(0)
+        elif c == ',':
             increment_color(0, True)
-        elif c == ';':
-            increment_color(1)
         elif c == ':':
+            increment_color(1)
+        elif c == ';':
             increment_color(1, True)
-        elif c == '?':
-            increment_color(2)
         elif c == '!':
+            increment_color(2)
+        elif c == '?':
             increment_color(2, True)
         # Other:
         elif c == '{':
-            t.begin_fill()
+            if fill_color:
+                t.begin_fill()
         elif c == '}':
-            t.end_fill()
+            if fill_color:
+                t.end_fill()
             gif_handler()
         elif c == '@':
-            t.dot(None, fill_color)
+            if fill_color:
+                t.dot(None, fill_color)
             gif_handler()
         elif c == '`':
-            stack.clear()
+            swap_cases = not swap_cases
         elif c == '[':
-            stack.append(State((t.xcor(), t.ycor()), t.heading(), angle, length,
-                               thickness, pen_color, fill_color, swap_signs, modify_fill))
+            stack.append(State((t.xcor(), t.ycor()), t.heading(), angle, length, thickness,
+                               pen_color, fill_color, swap_signs, swap_cases, modify_fill))
         elif c == ']':
             if stack:
                 state = stack.pop()
                 orient(t, state.position, state.heading)
                 angle, length = state.angle, state.length
-                swap_signs, modify_fill = state.swap_signs, state.change_fill
+                swap_signs, swap_cases, modify_fill = state.swap_signs, state.swap_cases, state.modify_fill
                 pen_color, fill_color = state.pen_color, state.fill_color
         elif c == '$':
             break
@@ -625,12 +642,11 @@ def run(  # pylint: disable=too-many-branches,too-many-statements
 
 
 if __name__ == '__main__':
-    init((600, 600), background_color=(36, 8, 107))
-    st = "F-G-G"
-    ru = "F {F-G+F+G-F G @GG"
-    draw('A', 'A B-A-B B A+B+A.', 60, 8, 5, 2, heading=150, position=(200, 00),
-         color=(200, 220, 255), fill_color=(255, 255, 255), red_increment=-2,
-         png='tri', max_frames=500, draws_per_frame=10, alternate=False,
+    init((600, 600))
+    draw('A', 'A 0B-2A-3B B 4A+5B+6A', 60, 8, 5, 2, heading=150, position=(200, 00), red_increment=-2,
+         color=None,
+         png='colors', max_frames=500, draws_per_frame=10, alternate=False, thickness_increment=2,
          padding=10,  speed=10, asap=False, reverse=False, tmpdir='', show_turtle=False,
-         turtle_shape='turtle', duration=30)
+         turtle_shape='turtle', duration=30, output_scale=2)
+
     wait()
