@@ -1,4 +1,4 @@
-"""Core source code of turtlsystems Python 3 package (https://pypi.org/project/turtlsystems)."""
+"""Core source code file of turtlsystems Python package (https://pypi.org/project/turtlsystems)."""
 
 import os
 import turtle
@@ -7,8 +7,8 @@ from pathlib import Path
 from typing import Any, List, Dict, Tuple, Iterable, Sequence, Optional, Union, cast
 from tempfile import TemporaryDirectory
 from contextlib import ExitStack
-from PIL import Image
 from packaging import version
+from PIL import Image
 
 # Types:
 Color = Tuple[int, int, int]
@@ -71,18 +71,43 @@ class State:  # pylint: disable=too-many-instance-attributes,too-few-public-meth
 
 
 def init(
-    window_size: Tuple[Union[int, float], Union[int, float]] = (0.75, 0.75),
+    window_size: Tuple[float, float] = (0.75, 0.75),
     window_title: str = "TurtLSystems",
     background_color: Tuple[int, int, int] = (0, 0, 0),
     background_image: Optional[str] = None,
-    window_position: Tuple[Optional[int], Optional[int]] = (None, None),
-    canvas_size: Tuple[Optional[int], Optional[int]] = (None, None),
+    window_position: Optional[Tuple[Optional[int], Optional[int]]] = None,
+    canvas_size: Optional[Tuple[Optional[int], Optional[int]]] = None,
+    ghostscript: Optional[str] = None,
     delay: int = 0,
     mode: str = 'standard',
-    ghostscript: Optional[str] = None,
     silent: bool = False
 ) -> None:
-    """TODO docstring"""
+    """Sets global TurtLSystems properties. Calling this is optional.
+
+    Args:
+        `window_size=(0.75, 0.75)` (Tuple[int | float, int | float]):
+            The size of the draw window as int pixel dimensions or float screen proportions.
+        `window_title="TurtLSystems"` (str):
+            The title of the draw window.
+        `background_color=(0, 0, 0)` (Tuple[int, int, int]):
+            0-255 rgb triplet to use as draw window background color. May be changed later by draw calls.
+        `background_image=None` (Optional[str]):
+            Path to a background image to use in the draw window.
+        `window_position=None` (Optional[Tuple[Optional[int], Optional[int]]]):
+            The top and left screen coordinates of the window, or None for centered.
+        `canvas_size=None` (Optional[Tuple[Optional[int], Optional[int]]]):
+            The size of the draw canvas when larger than the window size is desired.
+        `ghostscript=None` (Optional[str]):
+            The path or command name of ghostscript such as 'gs'.
+            When None an OS-based guess is made that works best on Windows.
+            Ghostscript is required for png and gif output.
+        `delay=0` (int):
+            Turtle graphics animation delay in milliseconds.
+        `mode='standard'` (str):
+            Turtle graphics coordinates mode. Either 'standard' or 'logo'.
+        `silent=False` (bool):
+            Whether to silence all messages and warnings produced by TurtLSystems.
+    """
     global _SILENT, _GHOSTSCRIPT, _INITIALIZED
     _SILENT = silent
     if _WAITED:
@@ -90,11 +115,12 @@ def init(
         return
     _GHOSTSCRIPT = ghostscript or ''
     window_w, window_h = window_size
-    window_x, window_y = window_position
+    window_x, window_y = window_position or (None, None)
     turtle.setup(window_w, window_h, window_x, window_y)
     # Use 1x1 canvas size unless canvas is actually bigger than window to avoid weird unnecessary scrollbars.
     # The canvas will still fill out the window, it won't behave like 1x1.
     canvas = turtle.getcanvas()  # Used to get final int window size as window_size may have been floats.
+    canvas_size = canvas_size or (None, None)
     canvas_w = 1 if canvas_size[0] is None or canvas_size[0] <= canvas.winfo_width() else canvas_size[0]
     canvas_h = 1 if canvas_size[1] is None or canvas_size[1] <= canvas.winfo_height() else canvas_size[1]
     turtle.screensize(canvas_w, canvas_h)
@@ -107,7 +133,7 @@ def init(
     _INITIALIZED = True
 
 
-def draw(
+def draw(  # pylint: disable=too-many-branches,too-many-statements
     start: str = 'F',
     rules: str = 'F F+F-F-F+F',
     angle: float = 90,
@@ -146,8 +172,8 @@ def draw(
     draws_per_frame: int = 1,
     max_frames: int = 100,
     duration: int = 20,
-    hold: int = 500,
-    delay: int = 0,
+    pause: int = 500,
+    defer: int = 0,
     loops: Optional[int] = None,
     reverse: bool = False,
     alternate: bool = False,
@@ -225,7 +251,7 @@ def draw(
         if gif:
             try:
                 gif = save_gif(gif, gif_data, output_scale, antialiasing, padding, transparent,
-                               duration, hold, delay, loops, reverse, alternate, optimize, save_gif_pngs)
+                               duration, pause, defer, loops, reverse, alternate, optimize, save_gif_pngs)
                 message(f'Saved gif "{gif}".')
             except Exception as e:  # pylint: disable=broad-except
                 message('Unable to save gif:', e)
@@ -238,11 +264,13 @@ def draw(
 
 
 def wait(exit_on_click: bool = True, *, skip_init: bool = False) -> None:
-    """Use `wait()` after all calls to `draw(...)` to keep the window open.
+    """Keeps draw window open. Calling this is optional. If used it must be placed last after all calls to `draw`.
 
     Args:
-        `exit_on_click=True` (bool): Whether the window can be closed by clicking anywhere.
-        `skip_init=False` (bool): For advanced use. Whether to skip calling `init`.
+        `exit_on_click=True` (bool):
+            Whether the window can be closed by clicking anywhere.
+        `skip_init=False` (bool):
+            For advanced use. Whether to skip calling `init` when it hasn't been called already.
     """
     if not skip_init and not _INITIALIZED:
         init()
@@ -335,8 +363,8 @@ def guess_ghostscript() -> str:
     Should prevent people from needing to add ghostscript to PATH.
     """
     if os.name != 'nt':
-        return 'gs'  # I'm not sure where to look on non-Windows OSes so just guess "gs".
-    locations = "C:\\Program Files\\gs", "C:\\Program Files (x86)\\gs"
+        return 'gs'  # I'm not sure where to look on non-Windows OSes so just guess 'gs'.
+    locations = 'C:\\Program Files\\gs', 'C:\\Program Files (x86)\\gs'
     files = 'gswin64c.exe', 'gswin32c.exe', 'gs.exe'
     for location in locations:
         path = Path(location)
@@ -352,7 +380,7 @@ def guess_ghostscript() -> str:
 
 
 def eps_to_png(eps: str, png: str, size: Tuple[int, int], output_scale: float, antialiasing: int) -> None:
-    """TODO docstring"""
+    """Uses ghostscript to convert eps file to png with transparent background."""
     result = subprocess.run([_GHOSTSCRIPT,
                             '-q',
                              '-dSAFER',
@@ -373,7 +401,7 @@ def eps_to_png(eps: str, png: str, size: Tuple[int, int], output_scale: float, a
 
 
 def get_padding_rect(image: Image.Image, padding: int) -> Tuple[int, int, int, int]:
-    """TODO docstring"""
+    """Returns rectangle around all non-transparent pixels in `image` padded by `padding` on all sides."""
     message(f'Padding {image.width}x{image.height} pixel image...')
     x_min, y_min, x_max, y_max = image.width - 1, image.height - 1, 0, 0
     data = image.load()
@@ -397,7 +425,7 @@ def get_padding_rect(image: Image.Image, padding: int) -> Tuple[int, int, int, i
 
 
 def save_eps(eps: str) -> Tuple[int, int]:
-    """TODO docstring"""
+    """Saves current turtle graphics canvas as encapsulated postscript file."""
     turtle.update()
     canvas = turtle.getcanvas()
     width = max(canvas.winfo_width(), canvas.canvwidth)  # type: ignore
@@ -418,7 +446,7 @@ def save_png(
     rect: Optional[Tuple[int, int, int, int]] = None,
     resave: bool = True,
 ) -> Tuple[str, Image.Image, Optional[Tuple[int, int, int, int]]]:
-    """TODO docstring"""
+    """Finalizes pre-existing eps file into png with background and padding."""
     png = str(Path(png).with_suffix(PNG_EXT).resolve())
     eps_to_png(eps, png, size, output_scale, antialiasing)
     image = Image.open(png).convert('RGBA')
@@ -441,15 +469,15 @@ def save_gif(
     padding: Optional[int],
     transparent: bool,
     duration: int,
-    hold: int,
-    delay: int,
+    pause: int,
+    defer: int,
     loops: Optional[int],
     reverse: bool,
     alternate: bool,
     optimize: bool,
     save_gif_pngs: bool
 ) -> str:
-    """TODO docstring"""
+    """Saves gif from pre-generated eps files, creating png for each frame along the way."""
     rect = None
     images = []
     for i, (eps, size, bg) in enumerate(reversed(gif_data)):  # Reverse so rect corresponds to last frame.
@@ -468,10 +496,8 @@ def save_gif(
     if alternate:
         images.extend(images[-2:0:-1])
     gif = str(Path(gif).with_suffix(GIF_EXT).resolve())
-    delaying = [images[0]] * (max(0, delay - duration) // duration)
-    holding = [images[-1]] * (max(0, hold - duration) // duration)
-    frames = delaying + images[1:] + holding
-    images[0].save(gif, save_all=True, append_images=frames, loop=loops or 0, duration=duration,
+    frames = [images[0]] * (defer // duration) + images + [images[-1]] * (pause // duration)
+    frames[0].save(gif, save_all=True, append_images=frames[1:], loop=loops or 0, duration=duration,
                    optimize=optimize, transparency=0 if transparent else 255)
     # PIL seems to treat blank animated gifs like static gifs, so their timing is wrong. But nbd since they're blank.
     return gif

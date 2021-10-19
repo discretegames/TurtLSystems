@@ -1,4 +1,4 @@
-"""Package setup file for turtlsystems Python 3 package (https://pypi.org/project/turtlsystems)."""
+"""Package setup file for turtlsystems Python package (https://pypi.org/project/turtlsystems)."""
 
 from pathlib import Path
 from setuptools import setup, find_packages
