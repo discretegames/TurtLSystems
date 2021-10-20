@@ -21,6 +21,7 @@
 		"exitonclick",
 		"gswin",
 		"isdown",
+		"isvisible",
 		"NOPAUSE",
 		"penup",
 		"pngalpha",

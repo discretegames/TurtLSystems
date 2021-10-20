@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Callable, List, Dict, Tuple, Iterable, Sequence, Optional, Union, cast
 from tempfile import TemporaryDirectory
 from contextlib import ExitStack
+from string import digits
 from packaging import version
 from PIL import Image
 
@@ -28,7 +29,7 @@ DEFAULT_COLORS = (
     (255, 0, 255),
 )
 PNG_EXT, GIF_EXT, EPS_EXT = '.png', '.gif', '.eps'
-FINAL_NAME, FRAME_NAME, DRAW_DIR_NAME = 'final', 'frame{}', 'draw{}'
+FINAL_NAME, FRAME_NAME, LEVEL_NAME, DRAW_DIR_NAME = 'final', 'frame', 'level', 'draw'
 DPI = 96
 
 # Mutating globals:
@@ -78,8 +79,8 @@ def init(
     window_position: Optional[Tuple[Optional[int], Optional[int]]] = None,
     canvas_size: Optional[Tuple[Optional[int], Optional[int]]] = None,
     ghostscript: Optional[str] = None,
-    delay: int = 0,
     mode: str = 'standard',
+    delay: Optional[int] = None,
     silent: bool = False
 ) -> None:
     """Sets global TurtLSystems properties. Calling this is optional.
@@ -101,10 +102,10 @@ def init(
             The path or command name of ghostscript such as 'gs'.
             When None an OS-based guess is made that works best on Windows.
             Ghostscript is required for png and gif output.
-        `delay=0` (int):
-            Turtle graphics animation delay in milliseconds.
         `mode='standard'` (str):
             Turtle graphics coordinates mode. Either 'standard' or 'logo'.
+        `delay=None` (Optional[int]):
+            Turtle graphics animation delay in milliseconds. None for default value.
         `silent=False` (bool):
             Whether to silence all messages and warnings produced by TurtLSystems.
     """
@@ -114,6 +115,12 @@ def init(
         message('Did not init() because wait() was already called.')
         return
     _GHOSTSCRIPT = ghostscript or ''
+    turtle.title(window_title)
+    turtle.mode(mode)
+    if delay is not None:
+        turtle.delay(delay)
+    turtle.colormode(255)
+    turtle.bgcolor(background_color)
     window_w, window_h = window_size
     window_x, window_y = window_position or (None, None)
     turtle.setup(window_w, window_h, window_x, window_y)
@@ -124,11 +131,6 @@ def init(
     canvas_w = 1 if canvas_size[0] is None or canvas_size[0] <= canvas.winfo_width() else canvas_size[0]
     canvas_h = 1 if canvas_size[1] is None or canvas_size[1] <= canvas.winfo_height() else canvas_size[1]
     turtle.screensize(canvas_w, canvas_h)
-    turtle.title(window_title)
-    turtle.mode(mode)
-    turtle.delay(delay)
-    turtle.colormode(255)
-    turtle.bgcolor(background_color)
     turtle.bgpic(background_image)
     _INITIALIZED = True
 
@@ -172,7 +174,7 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
     text_color: Optional[Tuple[int, int, int]] = (255, 255, 255),
     text_position: Tuple[int, int] = (0, -200),
     font: str = 'Arial',
-    font_size: int = 20,
+    font_size: int = 16,
     font_type: str = 'normal',
     align: str = 'center',
     # Png and gif frame args:
@@ -181,7 +183,6 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
     transparent: bool = False,
     antialiasing: int = 4,
     output_scale: float = 1,
-    tmpdir: Optional[str] = None,
     # Gif args:
     gif: Optional[str] = None,
     draws_per_frame: int = 1,
@@ -190,10 +191,12 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
     pause: int = 500,
     defer: int = 0,
     loops: Optional[int] = None,
+    growth: bool = False,
     reverse: bool = False,
     alternate: bool = False,
     optimize: bool = True,
     # Advanced args:
+    tmpdir: Optional[str] = None,
     skip_init: bool = False,
     callback: Optional[Callable[[str, turtle.Turtle], Optional[bool]]] = None,
 ) -> Tuple[str, Optional[turtle.Turtle]]:
@@ -268,7 +271,7 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
             x
         `font='Arial` (str):
             x
-        `font_size=20` (int):
+        `font_size=16` (int):
             x
         `font_type='normal'` (str):
             x
@@ -285,8 +288,6 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
             x
         `output_scale=1` (float):
             x
-        `tmpdir=None` (Optional[str]):
-            x
     Gif args:
         `gif=None` (Optional[str]):
             x
@@ -302,6 +303,8 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
             x
         `loops=None` (Optional[int]):
             x
+        `growth=False` (bool):
+            x
         `reverse=False` (bool):
             x
         `alternate=False` (bool):
@@ -309,6 +312,8 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
         `optimize=True` (bool):
             x
     Advanced args:
+        `tmpdir=None` (Optional[str]):
+            x
         `skip_init=False` (bool):
             x
         `callback=None` (Optional[Callable[[str, turtle.Turtle], Optional[bool]]]):
@@ -317,14 +322,45 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
         Optional[Tuple[str, turtle.Turtle]]:
             x
     """
-    global _DRAW_NUMBER
+    global _DRAW_NUMBER, _GHOSTSCRIPT
     _DRAW_NUMBER += 1
     if _WAITED:
         message('Did not draw() because wait() was already called.')
         return '', None
-
     if not skip_init and not _INITIALIZED:
         init()
+    if png or gif:
+        if not _GHOSTSCRIPT:
+            _GHOSTSCRIPT = guess_ghostscript()
+            message(f'Guessed ghostscript to be "{_GHOSTSCRIPT}".')
+
+    if gif and growth:  # Do growth animation of all levels of the L-system with recursive draw png calls.
+        with ExitStack() as exit_stack:
+            if not tmpdir:
+                tmpdir = exit_stack.enter_context(TemporaryDirectory())
+            drawdir = make_drawdir(tmpdir)
+            for lvl in range(level + 1):
+                lvl_png = str((drawdir / f'{LEVEL_NAME}{lvl}').with_suffix(PNG_EXT))
+                lvl_string, lvl_t = draw(
+                    start, rules, lvl, angle, length, thickness, color, fill_color, background_color,
+                    lvl != level or asap, png=lvl_png, padding=None, tmpdir=tmpdir,  # <-- Key differences.
+                    colors=colors, position=position, heading=heading, scale=scale, output_scale=output_scale,
+                    prefix=prefix, suffix=suffix, max_chars=max_chars, speed=speed, show_turtle=show_turtle,
+                    turtle_shape=turtle_shape, full_circle=full_circle, angle_increment=angle_increment,
+                    length_increment=length_increment, length_scalar=length_scalar,
+                    thickness_increment=thickness_increment, red_increment=red_increment,
+                    green_increment=green_increment, blue_increment=blue_increment, text=text,
+                    text_color=text_color, text_position=text_position, font=font, font_size=font_size,
+                    font_type=font_type, align=align, transparent=transparent, antialiasing=antialiasing
+                )
+                lvl_t = cast(turtle.Turtle, lvl_t)
+                if lvl != level:
+                    lvl_t.clear()
+                    lvl_t.hideturtle()
+
+            # TODO pad pngs, copy last png if needed, save gif, return properly
+        return '', None  # todo return last turtle
+
     turtle.colormode(255)
     if background_color:
         turtle.bgcolor(background_color)
@@ -333,78 +369,66 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
         turtle.tracer(0, 0)
 
     t = turtle.Turtle()
-    t.degrees(full_circle)
-    t.speed(speed)
-    t.shape(turtle_shape)
-    t.pencolor(255, 255, 255)  # Ensures pen and fill colors are initially tuples, not strings.
-    t.fillcolor(128, 128, 128)
+    if text and text_color:
+        orient(t, text_position)
+        t.pencolor(text_color)
+        try:
+            t.write(text, False, align, (font, font_size, font_type))
+        except Exception as e:  # pylint: disable=broad-except
+            message('Unable to add text:', e)
     if show_turtle:
         t.showturtle()
     else:
         t.hideturtle()
+    t.shape(turtle_shape)
+    t.degrees(full_circle)
+    t.speed(speed)
     position = scale * position[0], scale * position[1]
     orient(t, position, heading)
 
     string = prefix + lsystem(start, make_rules(rules), level) + suffix
-
     with ExitStack() as exit_stack:
         if png or gif:
-            save_gif_pngs = True
+            true_background_color = cast(Color, conform_color(turtle.bgcolor()))
             if not tmpdir:
                 tmpdir = exit_stack.enter_context(TemporaryDirectory())
-                save_gif_pngs = False
             drawdir = make_drawdir(tmpdir)
-            global _GHOSTSCRIPT
-            if not _GHOSTSCRIPT:
-                _GHOSTSCRIPT = guess_ghostscript()
-                message(f'Guessed ghostscript to be "{_GHOSTSCRIPT}".')
 
-        gif_data = run(t=t,
-                       string=string,
-                       colors=make_colors(color, fill_color, colors),
-                       full_circle=full_circle,
-                       position=position,
-                       heading=heading,
-                       angle=angle,
-                       length=scale*length,
-                       thickness=scale*thickness,
-                       angle_increment=angle_increment,
-                       length_increment=scale*length_increment,
-                       length_scalar=scale*length_scalar,
-                       thickness_increment=scale*thickness_increment,
-                       color_increments=(red_increment, green_increment, blue_increment),
-                       max_chars=max_chars,
-                       gif=gif,
-                       draws_per_frame=draws_per_frame,
-                       max_frames=max_frames,
-                       drawdir=drawdir if gif else None,
-                       callback=callback)
-
-        if text and text_color:
-            saved_position = t.position()
-            saved_color = cast(Color, conform_color(t.pencolor()))
-            orient(t, text_position)
-            t.pencolor(text_color)
-            try:
-                t.write(text, False, align, (font, font_size, font_type))
-            except Exception as e:  # pylint: disable=broad-except
-                message('Unable to add text:', e)
-            orient(t, saved_position)
-            t.pencolor(saved_color)
+        eps_paths, size = run(t=t,
+                              string=string,
+                              colors=make_colors(color, fill_color, colors),
+                              full_circle=full_circle,
+                              position=position,
+                              heading=heading,
+                              angle=angle,
+                              length=scale*length,
+                              thickness=scale*thickness,
+                              angle_increment=angle_increment,
+                              length_increment=scale*length_increment,
+                              length_scalar=scale*length_scalar,
+                              thickness_increment=scale*thickness_increment,
+                              color_increments=(red_increment, green_increment, blue_increment),
+                              max_chars=max_chars,
+                              gif=gif,
+                              draws_per_frame=draws_per_frame,
+                              max_frames=max_frames,
+                              drawdir=drawdir if gif else None,
+                              callback=callback)
 
         if png:
             eps = str((drawdir / FINAL_NAME).with_suffix(EPS_EXT))
             try:
                 png, _, _ = save_png(png, eps, save_eps(eps), output_scale, antialiasing,
-                                     cast(Color, conform_color(turtle.bgcolor())), padding, transparent)
+                                     true_background_color, padding, transparent)
                 message(f'Saved png "{png}".')
             except Exception as e:  # pylint: disable=broad-except
                 message('Unable to save png:', e)
 
         if gif:
             try:
-                gif = save_gif(gif, gif_data, output_scale, antialiasing, padding, transparent,
-                               duration, pause, defer, loops, reverse, alternate, optimize, save_gif_pngs)
+                pngs = prep_gif(eps_paths, size, true_background_color,
+                                output_scale, antialiasing, padding, transparent)
+                save_gif(gif, pngs, transparent, duration, pause, defer, loops, reverse, alternate, optimize)
                 message(f'Saved gif "{gif}".')
             except Exception as e:  # pylint: disable=broad-except
                 message('Unable to save gif:', e)
@@ -430,6 +454,7 @@ def wait(exit_on_click: bool = True, *, skip_init: bool = False) -> None:
     global _WAITED
     if not _WAITED:
         _WAITED = True
+        message('Waiting for user to close window.', flush=True)
         (turtle.exitonclick if exit_on_click else turtle.done)()
 
 
@@ -482,19 +507,22 @@ def make_colors(color: OpColor, fill_color: OpColor, colors: Optional[Iterable[O
 
 def make_drawdir(tmpdir: str) -> Path:
     """Creates drawdir in tempdir labeled with current draw number."""
-    drawdir = Path(tmpdir).resolve() / DRAW_DIR_NAME.format(_DRAW_NUMBER)
+    drawdir = Path(tmpdir).resolve() / f'{DRAW_DIR_NAME}{_DRAW_NUMBER}'
     drawdir.mkdir(parents=True, exist_ok=True)
-    for file in drawdir.iterdir():
-        if file.is_file():
+    for file in drawdir.iterdir():  # Carefully delete files in the drawdir that were from previous runs.
+        if file.is_file() and file.suffix in (PNG_EXT, EPS_EXT) and \
+                file.stem.rstrip(digits) in (FINAL_NAME, FRAME_NAME, LEVEL_NAME):
             file.unlink(missing_ok=True)
+    # drawdir folders are never deleted themselves because it would be too easy to accidentally delete user data.
     return drawdir
 
 
 def orient(t: turtle.Turtle, position: Optional[Tuple[float, float]], heading: Optional[float] = None) -> None:
     """Silently orients turtle `t` to given `position` and `heading`."""
     speed = t.speed()
-    down = t.isdown()
+    down, visible = t.isdown(), t.isvisible()
     t.penup()
+    t.hideturtle()
     t.speed(0)
     if position:
         t.setposition(position)
@@ -503,6 +531,8 @@ def orient(t: turtle.Turtle, position: Optional[Tuple[float, float]], heading: O
     t.speed(speed)
     if down:
         t.pendown()
+    if visible:
+        t.showturtle()
 
 
 def guess_ghostscript() -> str:
@@ -529,8 +559,8 @@ def guess_ghostscript() -> str:
 def eps_to_png(eps: str, png: str, size: Tuple[int, int], output_scale: float, antialiasing: int) -> None:
     """Uses ghostscript to convert eps file to png with transparent background."""
     result = subprocess.run([_GHOSTSCRIPT,
-                            '-q',
-                             '-dSAFER',
+                             '-q',
+                            '-dSAFER',
                              '-dBATCH',
                              '-dNOPAUSE',
                              '-dEPSCrop',
@@ -547,20 +577,22 @@ def eps_to_png(eps: str, png: str, size: Tuple[int, int], output_scale: float, a
         message(result.stdout)
 
 
-def get_padding_rect(image: Image.Image, padding: int) -> Tuple[int, int, int, int]:
-    """Returns rectangle around all non-transparent pixels in `image` padded by `padding` on all sides."""
+def get_padding_rect(
+        image: Image.Image, padding: int, fill: Tuple[int, int, int, int] = (0, 0, 0, 0)) -> Tuple[int, int, int, int]:
+    """Returns padded rectangle around all non-transparent and non-`fill` color pixels in `image`."""
     message(f'Padding {image.width}x{image.height} pixel image...')
     x_min, y_min, x_max, y_max = image.width - 1, image.height - 1, 0, 0
     data = image.load()
     empty = True
     for y in range(image.height):
         for x in range(image.width):
-            if data[x, y][3] != 0:
-                empty = False
-                x_min = min(x_min, x)
-                y_min = min(y_min, y)
-                x_max = max(x_max, x)
-                y_max = max(y_max, y)
+            if data[x, y][3] == 0 or data[x, y] == fill:
+                continue
+            empty = False
+            x_min = min(x_min, x)
+            y_min = min(y_min, y)
+            x_max = max(x_max, x)
+            y_max = max(y_max, y)
     if empty:
         x_min = x_max = image.width//2
         y_min = y_max = image.height//2
@@ -582,7 +614,7 @@ def save_eps(eps: str) -> Tuple[int, int]:
 
 
 def save_png(
-    png: str,
+    png: Optional[str],
     eps: str,
     size: Tuple[int, int],
     output_scale: float,
@@ -591,9 +623,10 @@ def save_png(
     padding: Optional[int],
     transparent: bool,
     rect: Optional[Tuple[int, int, int, int]] = None,
-    resave: bool = True,
 ) -> Tuple[str, Image.Image, Optional[Tuple[int, int, int, int]]]:
     """Finalizes pre-existing eps file into png with background and padding."""
+    if not png:
+        png = eps
     png = str(Path(png).with_suffix(PNG_EXT).resolve())
     eps_to_png(eps, png, size, output_scale, antialiasing)
     image = Image.open(png).convert('RGBA')
@@ -603,17 +636,31 @@ def save_png(
         image = image.crop(rect)
     background = Image.new('RGBA', image.size, background_color + ((0,) if transparent else (255,)))
     image = Image.alpha_composite(background, image)
-    if resave:
-        image.save(png)
+    image.save(png)
     return png, image, rect
+
+
+def prep_gif(eps_paths: List[str], size: Tuple[int, int], background_color: Color, output_scale: float,
+             antialiasing: int, padding: Optional[int], transparent: bool) -> List[str]:
+    """Converts eps files into pngs in preperation for gif. Returns list of png paths."""
+    pngs, images, rect = [], [], None
+    for i, eps in enumerate(reversed(eps_paths)):  # Reverse so rect corresponds to last frame.
+        png, image, r = save_png(None, eps, size, output_scale, antialiasing,
+                                 background_color, padding, transparent, rect)
+        images.append(image)
+        pngs.append(png)
+        if not i:
+            rect = r
+            message(f'Making {len(eps_paths)} gif frames..', end='', flush=True)
+        elif (len(eps_paths) - i) % 10 == 0:
+            message(f'{len(eps_paths) - i}..', end='', flush=True)
+    message('.')
+    return pngs
 
 
 def save_gif(
     gif: str,
-    gif_data: List[Tuple[str, Tuple[int, int], Color]],
-    output_scale: float,
-    antialiasing: int,
-    padding: Optional[int],
+    pngs: List[str],
     transparent: bool,
     duration: int,
     pause: int,
@@ -622,22 +669,9 @@ def save_gif(
     reverse: bool,
     alternate: bool,
     optimize: bool,
-    save_gif_pngs: bool
 ) -> str:
-    """Saves gif from pre-generated eps files, creating png for each frame along the way."""
-    rect = None
-    images = []
-    for i, (eps, size, bg) in enumerate(reversed(gif_data)):  # Reverse so rect corresponds to last frame.
-        png = str(Path(eps).with_suffix(PNG_EXT))
-        _, image, r = save_png(png, eps, size, output_scale, antialiasing,
-                               bg, padding, transparent, rect, save_gif_pngs)
-        images.append(image)
-        if not i:
-            rect = r
-            message(f'Making {len(gif_data)} gif frames..', end='', flush=True)
-        elif (len(gif_data) - i) % 10 == 0:
-            message(f'{len(gif_data) - i}..', end='', flush=True)
-    message('.')
+    """Saves gif from pre-generated png files. Returns path to gif."""
+    images = [Image.open(png).convert('RGBA') for png in pngs]
     if not reverse:
         images.reverse()  # Reversing here puts it back in proper order.
     if alternate:
@@ -672,21 +706,23 @@ def run(  # pylint: disable=too-many-branches,too-many-statements
     max_frames: int,
     drawdir: Optional[Path],
     callback: Optional[Callable[[str, turtle.Turtle], Optional[bool]]]
-) -> List[Tuple[str, Tuple[int, int], Color]]:
+) -> Tuple[List[str], Tuple[int, int]]:
     """Run turtle `t` on L-system string `string` with given options."""
     initial_angle, initial_length, initial_thickness = angle, length, thickness
     swap_signs, swap_cases, modify_fill = False, False, False
     pen_color, fill_color = colors[0], colors[1]
     stack: List[State] = []
-    gif_data: List[Tuple[str, Tuple[int, int], Color]] = []
+    eps_paths: List[str] = []
+    size = (1, 1)
     draws, frames_attempted = 0, 0
 
     def save_frame() -> None:
-        nonlocal frames_attempted
+        nonlocal frames_attempted, size
         frames_attempted += 1
-        if len(gif_data) < max_frames:
-            eps = str((cast(Path, drawdir) / FRAME_NAME.format(len(gif_data))).with_suffix(EPS_EXT))
-            gif_data.append((eps, save_eps(eps), cast(Color, conform_color(turtle.bgcolor()))))
+        if len(eps_paths) < max_frames:
+            eps = str((cast(Path, drawdir) / f'{FRAME_NAME}{len(eps_paths)}').with_suffix(EPS_EXT))
+            size = save_eps(eps)
+            eps_paths.append(eps)
 
     def gif_handler() -> None:
         if gif:
@@ -719,10 +755,8 @@ def run(  # pylint: disable=too-many-branches,too-many-statements
             set_color((lst[0], lst[1], lst[2]))
 
     set_pensize()
-    if pen_color:
-        t.pencolor(pen_color)
-    if fill_color:
-        t.fillcolor(fill_color)
+    t.pencolor(pen_color or (0, 0, 0))  # Or with (0, 0, 0) to ensure colors are initially tuples, not strings.
+    t.fillcolor(fill_color or (0, 0, 0))
     if gif:
         save_frame()
 
@@ -815,7 +849,6 @@ def run(  # pylint: disable=too-many-branches,too-many-statements
             orient(t, None, heading)
         elif c == '$':
             stack.clear()
-            t.clear()
         elif c == '[':
             stack.append(State((t.xcor(), t.ycor()), t.heading(), angle, length, thickness,
                                pen_color, fill_color, swap_signs, swap_cases, modify_fill))
@@ -835,21 +868,28 @@ def run(  # pylint: disable=too-many-branches,too-many-statements
     if gif:
         if draws % draws_per_frame != 0:
             save_frame()  # Save frame of final changes unless nothing has changed.
-        message(f'Prepped {len(gif_data)} gif frames of {frames_attempted} attempted for {draws + 1} draws.')
+        message(f'Prepped {len(eps_paths)} gif frames of {frames_attempted} attempted for {draws + 1} draws.')
 
-    return gif_data
+    return eps_paths, size
 
 
 if __name__ == '__main__':
-    s = []
-    init((600, 600), ghostscript='')
-    ss, tt = draw('A', 'A 0B-2A-3B B 4A+5B+6A', 4, 60, 8,  2, heading=150, position=(200, 00), red_increment=-2,
-                  color=None, tmpdir='tmp', text='text test', font='Consolas', font_type='italic',
-                  callback=lambda c, t: s.append(c), prefix='FFF', text_color=None,
-                  png='d', max_frames=500, draws_per_frame=20, alternate=False, thickness_increment=2,
-                  padding=None,  speed=10, asap=False, reverse=False, show_turtle=False,
-                  turtle_shape='turtle', duration=30, output_scale=2,
-                  max_chars=20)
-    print(len(s), ''.join(s))
-    print(ss)
+    # s = []
+    # init((600, 600), ghostscript='')
+    # ss, tt = draw('A', 'A 0B-2A-3B B 4A+5B+6A', 0, 60, 8,  2, heading=150, position=(200, 00), red_increment=-2,
+    #               color=None, tmpdir='tmp', text='text test', font='Consolas', font_type='italic',
+    #               callback=lambda c, t: s.append(c), prefix='FFF',
+    #               png='', max_frames=500, draws_per_frame=20, alternate=False, thickness_increment=2,
+    #               padding=None,  speed=10, asap=False, reverse=False, show_turtle=False,
+    #               turtle_shape='turtle', duration=30, output_scale=2,
+    #               max_chars=20)
+    # print(len(s), ''.join(s))
+    # print(ss)
+    # wait()
+    # init()
+    # s, t = draw(speed=1, level=2, skip_init=True, color=(255, 0, 0))
+    init((800, 800))
+    draw('F', 'F F+F-', 6, 90, 20,
+         tmpdir='tmp', png='growth', gif='', text='Growth Test', asap=False, speed=0, growth=False,
+         show_turtle=True, turtle_shape='turtle', color=(255, 0, 0))
     wait()
