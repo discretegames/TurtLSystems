@@ -4,7 +4,7 @@ import os
 import turtle
 import subprocess
 from pathlib import Path
-from typing import Any, List, Dict, Tuple, Iterable, Sequence, Optional, Union, cast
+from typing import Any, Callable, List, Dict, Tuple, Iterable, Sequence, Optional, Union, cast
 from tempfile import TemporaryDirectory
 from contextlib import ExitStack
 from packaging import version
@@ -134,19 +134,32 @@ def init(
 
 
 def draw(  # pylint: disable=too-many-branches,too-many-statements
+    # Positional args:
     start: str = 'F',
     rules: str = 'F F+F-F-F+F',
     level: int = 4,
     angle: float = 90,
-    length: float = 10,
+    length: float = 20,
     thickness: float = 1,
     color: Optional[Tuple[int, int, int]] = (255, 255, 255),
     fill_color: Optional[Tuple[int, int, int]] = (128, 128, 128),
     background_color: Optional[Tuple[int, int, int]] = None,
+    asap: bool = False,
     *,
+    # Customization args:
     colors: Optional[Iterable[Optional[Tuple[int, int, int]]]] = None,
     position: Tuple[float, float] = (0, 0),
     heading: float = 0,
+    scale: float = 1,
+    prefix: str = '',
+    suffix: str = '',
+    max_chars: Optional[int] = None,
+    # Turtle args:
+    speed: Union[int, str] = 0,
+    show_turtle: bool = False,
+    turtle_shape: str = 'classic',
+    full_circle: float = 360,
+    # Increment args:
     angle_increment: float = 15,
     length_increment: float = 5,
     length_scalar: float = 2,
@@ -154,20 +167,22 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
     red_increment: int = 1,
     green_increment: int = 1,
     blue_increment: int = 1,
-    scale: float = 1,
-    prefix: str = '',
-    suffix: str = '',
-    asap: bool = False,
-    speed: Union[int, str] = 0,
-    show_turtle: bool = False,
-    turtle_shape: str = 'classic',
-    full_circle: float = 360,
-    skip_init: bool = False,
+    # Text args:
+    text: Optional[str] = None,
+    text_color: Optional[Tuple[int, int, int]] = (255, 255, 255),
+    text_position: Tuple[int, int] = (0, -200),
+    font: str = 'Arial',
+    font_size: int = 20,
+    font_type: str = 'normal',
+    align: str = 'center',
+    # Png and gif frame args:
     png: Optional[str] = None,
     padding: Optional[int] = 10,
-    output_scale: float = 1,
-    antialiasing: int = 4,
     transparent: bool = False,
+    antialiasing: int = 4,
+    output_scale: float = 1,
+    tmpdir: Optional[str] = None,
+    # Gif args:
     gif: Optional[str] = None,
     draws_per_frame: int = 1,
     max_frames: int = 100,
@@ -178,20 +193,22 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
     reverse: bool = False,
     alternate: bool = False,
     optimize: bool = True,
-    tmpdir: Optional[str] = None
-) -> Optional[Tuple[str, turtle.Turtle]]:
-    """Todo
+    # Advanced args:
+    skip_init: bool = False,
+    callback: Optional[Callable[[str, turtle.Turtle], Optional[bool]]] = None,
+) -> Tuple[str, Optional[turtle.Turtle]]:
+    """Todo fill out descriptions.
 
-    Args:
+    Positional args:
         `start='F'` (str):
             x
         `rules='F F+F-F-F+F'` (str):
             x
         `level=4` (int):
             x
-        `angle (float):
+        `angle=90` (float):
             x
-        `length (float):
+        `length=20` (float):
             x
         `thickness=1` (float):
             x
@@ -201,12 +218,33 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
             x
         `background_color=None` (Optional[Tuple[int, int, int]]):
             x
+        `asap=False` (bool):
+            x
+    Customization args:
         `colors=None` (Optional[Iterable[Optional[Tuple[int, int, int]]]]):
             x
         `position=(0, 0)` (Tuple[float, float]):
             x
         `heading=0` (float):
             x
+        `scale=1'` (float):
+            x
+        `prefix=''` (str):
+            x
+        `suffix=''` (str):
+            x
+        `max_chars=None` (Optional[int]):
+            x
+    Turtle args:
+        `speed='fastest'` (Union[int, str]):
+            x
+        `show_turtle=False` (bool):
+            x
+        `turtle_shape='classic'` (str):
+            x
+        `full_circle=360` (float):
+            x
+    Increment args:
         `angle_increment=15` (float):
             x
         `length_increment=5` (float):
@@ -221,34 +259,35 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
             x
         `blue_increment=1` (int):
             x
-        `scale=1'` (float):
+    Text args:
+        `text=None` (Optional[str]):
             x
-        `prefix=''` (str):
+        `text_color=(255, 255, 255)` (Optional[Tuple[int, int, int]]):
             x
-        `suffix=''` (str):
+        `text_position=(0, -200)` (Tuple[int, int]):
             x
-        `asap=False` (bool):
+        `font='Arial` (str):
             x
-        `speed=0` (Union[int, str]):
+        `font_size=20` (int):
             x
-        `show_turtle=False` (bool):
+        `font_type='normal'` (str):
             x
-        `turtle_shape='classic'` (str):
+        `align='center'` (str):
             x
-        `full_circle=360` (float):
-            x
-        `skip_init=False` (bool):
-            x
+    Png and gif frame args:
         `png=None` (Optional[str]):
             x
         `padding=10` (Optional[int]):
             x
-        `output_scale=1` (float):
+        `transparent=False` (bool):
             x
         `antialiasing=4` (int):
             x
-        `transparent=False` (bool):
+        `output_scale=1` (float):
             x
+        `tmpdir=None` (Optional[str]):
+            x
+    Gif args:
         `gif=None` (Optional[str]):
             x
         `draws_per_frame=1` (int):
@@ -269,9 +308,11 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
             x
         `optimize=True` (bool):
             x
-        `tmpdir=None` (Optional[str]):
+    Advanced args:
+        `skip_init=False` (bool):
             x
-
+        `callback=None` (Optional[Callable[[str, turtle.Turtle], Optional[bool]]]):
+            x
     Returns:
         Optional[Tuple[str, turtle.Turtle]]:
             x
@@ -280,7 +321,7 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
     _DRAW_NUMBER += 1
     if _WAITED:
         message('Did not draw() because wait() was already called.')
-        return None
+        return '', None
 
     if not skip_init and not _INITIALIZED:
         init()
@@ -295,6 +336,8 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
     t.degrees(full_circle)
     t.speed(speed)
     t.shape(turtle_shape)
+    t.pencolor(255, 255, 255)  # Ensures pen and fill colors are initially tuples, not strings.
+    t.fillcolor(128, 128, 128)
     if show_turtle:
         t.showturtle()
     else:
@@ -330,15 +373,30 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
                        length_scalar=scale*length_scalar,
                        thickness_increment=scale*thickness_increment,
                        color_increments=(red_increment, green_increment, blue_increment),
+                       max_chars=max_chars,
                        gif=gif,
                        draws_per_frame=draws_per_frame,
                        max_frames=max_frames,
-                       drawdir=drawdir if gif else None)
+                       drawdir=drawdir if gif else None,
+                       callback=callback)
+
+        if text and text_color:
+            saved_position = t.position()
+            saved_color = cast(Color, conform_color(t.pencolor()))
+            orient(t, text_position)
+            t.pencolor(text_color)
+            try:
+                t.write(text, False, align, (font, font_size, font_type))
+            except Exception as e:  # pylint: disable=broad-except
+                message('Unable to add text:', e)
+            orient(t, saved_position)
+            t.pencolor(saved_color)
+
         if png:
             eps = str((drawdir / FINAL_NAME).with_suffix(EPS_EXT))
             try:
                 png, _, _ = save_png(png, eps, save_eps(eps), output_scale, antialiasing,
-                                     get_background_color(), padding, transparent)
+                                     cast(Color, conform_color(turtle.bgcolor())), padding, transparent)
                 message(f'Saved png "{png}".')
             except Exception as e:  # pylint: disable=broad-except
                 message('Unable to save png:', e)
@@ -398,17 +456,11 @@ def clamp(value: int, minimum: int = 0, maximum: int = 255) -> int:
     return max(minimum, min(value, maximum))
 
 
-def conform_color(color: Optional[Sequence[int]]) -> OpColor:
+def conform_color(color: Optional[Sequence[float]]) -> OpColor:
     """Ensures `color` is a tuple with 0-255 clamped rgb."""
     if color:
         return clamp(int(color[0])), clamp(int(color[1])), clamp(int(color[2]))
     return None
-
-
-def get_background_color() -> Color:
-    """Returns current turtle graphics background color. Assumes it's a 0-255 rgb tuple."""
-    r, g, b = turtle.bgcolor()
-    return int(r), int(g), int(b)
 
 
 def make_rules(rules: Union[str, Dict[str, str]]) -> Dict[str, str]:
@@ -438,7 +490,7 @@ def make_drawdir(tmpdir: str) -> Path:
     return drawdir
 
 
-def orient(t: turtle.Turtle, position: Optional[Tuple[float, float]], heading: Optional[float]) -> None:
+def orient(t: turtle.Turtle, position: Optional[Tuple[float, float]], heading: Optional[float] = None) -> None:
     """Silently orients turtle `t` to given `position` and `heading`."""
     speed = t.speed()
     down = t.isdown()
@@ -614,10 +666,12 @@ def run(  # pylint: disable=too-many-branches,too-many-statements
     length_scalar: float,
     thickness_increment: float,
     color_increments: Tuple[int, int, int],
+    max_chars: Optional[int],
     gif: Optional[str],
     draws_per_frame: int,
     max_frames: int,
-    drawdir: Optional[Path]
+    drawdir: Optional[Path],
+    callback: Optional[Callable[[str, turtle.Turtle], Optional[bool]]]
 ) -> List[Tuple[str, Tuple[int, int], Color]]:
     """Run turtle `t` on L-system string `string` with given options."""
     initial_angle, initial_length, initial_thickness = angle, length, thickness
@@ -632,7 +686,7 @@ def run(  # pylint: disable=too-many-branches,too-many-statements
         frames_attempted += 1
         if len(gif_data) < max_frames:
             eps = str((cast(Path, drawdir) / FRAME_NAME.format(len(gif_data))).with_suffix(EPS_EXT))
-            gif_data.append((eps, save_eps(eps), get_background_color()))
+            gif_data.append((eps, save_eps(eps), cast(Color, conform_color(turtle.bgcolor()))))
 
     def gif_handler() -> None:
         if gif:
@@ -672,7 +726,9 @@ def run(  # pylint: disable=too-many-branches,too-many-statements
     if gif:
         save_frame()
 
-    for c in string:
+    for i, c in enumerate(string):
+        if max_chars is not None and i >= max_chars:
+            break
         if swap_cases and c.isalpha():
             c = c.lower() if c.isupper() else c.upper()
 
@@ -754,7 +810,7 @@ def run(  # pylint: disable=too-many-branches,too-many-statements
         elif c == '`':
             swap_cases = not swap_cases
         elif c == '"':
-            orient(t, position, None)
+            orient(t, position)
         elif c == "'":
             orient(t, None, heading)
         elif c == '$':
@@ -773,6 +829,9 @@ def run(  # pylint: disable=too-many-branches,too-many-statements
         elif c == '\\':
             break
 
+        if callback and callback(c, t):
+            break
+
     if gif:
         if draws % draws_per_frame != 0:
             save_frame()  # Save frame of final changes unless nothing has changed.
@@ -782,10 +841,15 @@ def run(  # pylint: disable=too-many-branches,too-many-statements
 
 
 if __name__ == '__main__':
+    s = []
     init((600, 600), ghostscript='')
-    draw('A', 'A 0B-2A-3B B 4A+5B+6A', 4, 60, 8,  2, heading=150, position=(200, 00), red_increment=-2,
-         color=None,
-         png='', max_frames=500, draws_per_frame=20, alternate=False, thickness_increment=2,
-         padding=None,  speed=10, asap=False, reverse=False, tmpdir='', show_turtle=False,
-         turtle_shape='turtle', duration=30, output_scale=2)
+    ss, tt = draw('A', 'A 0B-2A-3B B 4A+5B+6A', 4, 60, 8,  2, heading=150, position=(200, 00), red_increment=-2,
+                  color=None, tmpdir='tmp', text='text test', font='Consolas', font_type='italic',
+                  callback=lambda c, t: s.append(c), prefix='FFF', text_color=None,
+                  png='d', max_frames=500, draws_per_frame=20, alternate=False, thickness_increment=2,
+                  padding=None,  speed=10, asap=False, reverse=False, show_turtle=False,
+                  turtle_shape='turtle', duration=30, output_scale=2,
+                  max_chars=20)
+    print(len(s), ''.join(s))
+    print(ss)
     wait()
