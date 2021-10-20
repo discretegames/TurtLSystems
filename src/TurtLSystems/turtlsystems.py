@@ -7,9 +7,10 @@ from pathlib import Path
 from typing import Any, Callable, List, Dict, Tuple, Iterable, Sequence, Optional, Union, cast
 from tempfile import TemporaryDirectory
 from contextlib import ExitStack
+from shutil import copyfile
 from string import digits
-from packaging import version
 from PIL import Image
+from packaging import version
 
 # Types:
 Color = Tuple[int, int, int]
@@ -135,6 +136,7 @@ def init(
     _INITIALIZED = True
 
 
+# Horrendously long function that started small and kept getting bigger and bigger. Can't be bothered to refactor.
 def draw(  # pylint: disable=too-many-branches,too-many-statements
     # Positional args:
     start: str = 'F',
@@ -329,21 +331,29 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
         return '', None
     if not skip_init and not _INITIALIZED:
         init()
+
+    turtle.colormode(255)
+    if background_color:
+        turtle.bgcolor(background_color)
+
     if png or gif:
+        true_background_color = cast(Color, conform_color(turtle.bgcolor()))
         if not _GHOSTSCRIPT:
             _GHOSTSCRIPT = guess_ghostscript()
             message(f'Guessed ghostscript to be "{_GHOSTSCRIPT}".')
 
     if gif and growth:  # Do growth animation of all levels of the L-system with recursive draw png calls.
+        # Didn't put this in own function since it would need every single little arg. Cumbersome either way.
         with ExitStack() as exit_stack:
             if not tmpdir:
                 tmpdir = exit_stack.enter_context(TemporaryDirectory())
             drawdir = make_drawdir(tmpdir)
+            pngs = []
             for lvl in range(level + 1):
-                lvl_png = str((drawdir / f'{LEVEL_NAME}{lvl}').with_suffix(PNG_EXT))
+                pngs.append(str((drawdir / f'{LEVEL_NAME}{lvl}').with_suffix(PNG_EXT)))
                 lvl_string, lvl_t = draw(
-                    start, rules, lvl, angle, length, thickness, color, fill_color, background_color,
-                    lvl != level or asap, png=lvl_png, padding=None, tmpdir=tmpdir,  # <-- Key differences.
+                    start, rules, lvl, angle, length, thickness, color, fill_color,
+                    None, lvl != level or asap, png=pngs[-1], padding=None, tmpdir=tmpdir,  # <-- Key differences.
                     colors=colors, position=position, heading=heading, scale=scale, output_scale=output_scale,
                     prefix=prefix, suffix=suffix, max_chars=max_chars, speed=speed, show_turtle=show_turtle,
                     turtle_shape=turtle_shape, full_circle=full_circle, angle_increment=angle_increment,
@@ -358,12 +368,36 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
                     lvl_t.clear()
                     lvl_t.hideturtle()
 
-            # TODO pad pngs, copy last png if needed, save gif, return properly
-        return '', None  # todo return last turtle
+            rect_for_all = None
+            for i, lvl_png in enumerate(reversed(pngs)):
+                image = Image.open(lvl_png).convert('RGBA')
+                image, rect = pad_image(image, padding, rect_for_all, output_scale, true_background_color, transparent)
+                if not i:
+                    rect_for_all = rect
+                image.save(lvl_png)
 
-    turtle.colormode(255)
-    if background_color:
-        turtle.bgcolor(background_color)
+            last_frame = Image.open(pngs[-1]).convert('RGBA')
+            last_frame, rect_for_all = pad_image(
+                last_frame, padding, None, output_scale, true_background_color, transparent)
+
+            for lvl_png in pngs:
+                image = Image.open(lvl_png).convert('RGBA')
+
+            if png:
+                try:
+                    png = str(Path(png).with_suffix(PNG_EXT).resolve())
+                    copyfile(pngs[-1], png)
+                    message(f'Saved png "{png}".')
+                except Exception as e:  # pylint: disable=broad-except
+                    message('Unable to save png:', e)
+            try:
+                save_gif(gif, pngs, transparent, duration, pause, defer, loops, reverse, alternate, optimize)
+                message(f'Saved growth gif "{gif}".')
+            except Exception as e:  # pylint: disable=broad-except
+                message('Unable to save growth gif:', e)
+        return lvl_string, lvl_t
+    # End of growth flag code.
+
     if asap:
         saved_tracer, saved_delay = turtle.tracer(), turtle.delay()
         turtle.tracer(0, 0)
@@ -389,7 +423,6 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
     string = prefix + lsystem(start, make_rules(rules), level) + suffix
     with ExitStack() as exit_stack:
         if png or gif:
-            true_background_color = cast(Color, conform_color(turtle.bgcolor()))
             if not tmpdir:
                 tmpdir = exit_stack.enter_context(TemporaryDirectory())
             drawdir = make_drawdir(tmpdir)
@@ -418,8 +451,8 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
         if png:
             eps = str((drawdir / FINAL_NAME).with_suffix(EPS_EXT))
             try:
-                png, _, _ = save_png(png, eps, save_eps(eps), output_scale, antialiasing,
-                                     true_background_color, padding, transparent)
+                png, _ = save_png(png, eps, save_eps(eps), output_scale, antialiasing,
+                                  true_background_color, transparent, padding)
                 message(f'Saved png "{png}".')
             except Exception as e:  # pylint: disable=broad-except
                 message('Unable to save png:', e)
@@ -454,7 +487,7 @@ def wait(exit_on_click: bool = True, *, skip_init: bool = False) -> None:
     global _WAITED
     if not _WAITED:
         _WAITED = True
-        message('Waiting for user to close window.', flush=True)
+        message('Waiting for user to close window...', flush=True)
         (turtle.exitonclick if exit_on_click else turtle.done)()
 
 
@@ -578,15 +611,15 @@ def eps_to_png(eps: str, png: str, size: Tuple[int, int], output_scale: float, a
 
 
 def get_padding_rect(
-        image: Image.Image, padding: int, fill: Tuple[int, int, int, int] = (0, 0, 0, 0)) -> Tuple[int, int, int, int]:
-    """Returns padded rectangle around all non-transparent and non-`fill` color pixels in `image`."""
-    message(f'Padding {image.width}x{image.height} pixel image...')
+        image: Image.Image, padding: int, background_color: Color) -> Tuple[int, int, int, int]:
+    """Returns rectangle around content pixels in `image` padded by `padding` on all sides."""
+    message(f'Calculating padding for {image.width}x{image.height} pixel image...')
     x_min, y_min, x_max, y_max = image.width - 1, image.height - 1, 0, 0
     data = image.load()
     empty = True
     for y in range(image.height):
         for x in range(image.width):
-            if data[x, y][3] == 0 or data[x, y] == fill:
+            if data[x, y][3] == 0 or background_color == data[x, y][:3]:
                 continue
             empty = False
             x_min = min(x_min, x)
@@ -613,6 +646,24 @@ def save_eps(eps: str) -> Tuple[int, int]:
     return width, height
 
 
+def pad_image(
+    image: Image.Image,
+    padding: Optional[int],
+    rect: Optional[Tuple[int, int, int, int]],
+    output_scale: float,
+    background_color: Color,
+    transparent: bool
+) -> Tuple[Image.Image, Optional[Tuple[int, int, int, int]]]:
+    """Pads image on all sides and gives it correct background color."""
+    if padding is not None:
+        if not rect:
+            rect = get_padding_rect(image, round(output_scale * padding), background_color)
+        image = image.crop(rect)
+    # Transparent backgrounds still have the correct color but alpha is 0.
+    background = Image.new('RGBA', image.size, background_color + ((0,) if transparent else (255,)))
+    return Image.alpha_composite(background, image), rect
+
+
 def save_png(
     png: Optional[str],
     eps: str,
@@ -620,40 +671,35 @@ def save_png(
     output_scale: float,
     antialiasing: int,
     background_color: Color,
-    padding: Optional[int],
     transparent: bool,
+    padding: Optional[int],
     rect: Optional[Tuple[int, int, int, int]] = None,
-) -> Tuple[str, Image.Image, Optional[Tuple[int, int, int, int]]]:
+) -> Tuple[str, Optional[Tuple[int, int, int, int]]]:
     """Finalizes pre-existing eps file into png with background and padding."""
     if not png:
         png = eps
     png = str(Path(png).with_suffix(PNG_EXT).resolve())
     eps_to_png(eps, png, size, output_scale, antialiasing)
     image = Image.open(png).convert('RGBA')
-    if padding is not None:
-        if rect is None:
-            rect = get_padding_rect(image, round(output_scale * padding))
-        image = image.crop(rect)
-    background = Image.new('RGBA', image.size, background_color + ((0,) if transparent else (255,)))
-    image = Image.alpha_composite(background, image)
+    image, rect = pad_image(image, padding, rect, output_scale, background_color, transparent)
     image.save(png)
-    return png, image, rect
+    return png, rect
 
 
 def prep_gif(eps_paths: List[str], size: Tuple[int, int], background_color: Color, output_scale: float,
              antialiasing: int, padding: Optional[int], transparent: bool) -> List[str]:
     """Converts eps files into pngs in preperation for gif. Returns list of png paths."""
-    pngs, images, rect = [], [], None
-    for i, eps in enumerate(reversed(eps_paths)):  # Reverse so rect corresponds to last frame.
-        png, image, r = save_png(None, eps, size, output_scale, antialiasing,
-                                 background_color, padding, transparent, rect)
-        images.append(image)
+    pngs, rect_for_all = [], None
+    for i, eps in enumerate(reversed(eps_paths)):  # Reverse so rect_for_all corresponds to last frame.
+        png, rect = save_png(None, eps, size, output_scale, antialiasing,
+                             background_color, transparent, padding, rect_for_all)
         pngs.append(png)
         if not i:
-            rect = r
+            rect_for_all = rect
             message(f'Making {len(eps_paths)} gif frames..', end='', flush=True)
         elif (len(eps_paths) - i) % 10 == 0:
             message(f'{len(eps_paths) - i}..', end='', flush=True)
+    pngs.reverse()
     message('.')
     return pngs
 
@@ -672,8 +718,8 @@ def save_gif(
 ) -> str:
     """Saves gif from pre-generated png files. Returns path to gif."""
     images = [Image.open(png).convert('RGBA') for png in pngs]
-    if not reverse:
-        images.reverse()  # Reversing here puts it back in proper order.
+    if reverse:
+        images.reverse()
     if alternate:
         images.extend(images[-2:0:-1])
     gif = str(Path(gif).with_suffix(GIF_EXT).resolve())
@@ -888,8 +934,9 @@ if __name__ == '__main__':
     # wait()
     # init()
     # s, t = draw(speed=1, level=2, skip_init=True, color=(255, 0, 0))
-    init((800, 800))
+    init((800, 800), background_color=(0, 26, 0))
     draw('F', 'F F+F-', 6, 90, 20,
-         tmpdir='tmp', png='growth', gif='', text='Growth Test', asap=False, speed=0, growth=False,
-         show_turtle=True, turtle_shape='turtle', color=(255, 0, 0))
-    wait()
+         tmpdir='tmp', png='tmp/growth', gif='tmp/growth', text='Growth Test', asap=True, growth=True, duration=70,
+         show_turtle=True, turtle_shape='turtle', padding=-10, draws_per_frame=6, background_color=None,
+         alternate=True, pause=0)
+    # wait()
