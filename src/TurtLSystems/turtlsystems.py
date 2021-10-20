@@ -136,9 +136,9 @@ def init(
 def draw(  # pylint: disable=too-many-branches,too-many-statements
     start: str = 'F',
     rules: str = 'F F+F-F-F+F',
+    level: int = 4,
     angle: float = 90,
     length: float = 10,
-    level: int = 4,
     thickness: float = 1,
     color: Optional[Tuple[int, int, int]] = (255, 255, 255),
     fill_color: Optional[Tuple[int, int, int]] = (128, 128, 128),
@@ -180,7 +180,102 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
     optimize: bool = True,
     tmpdir: Optional[str] = None
 ) -> Optional[Tuple[str, turtle.Turtle]]:
-    """TODO docstring"""
+    """Todo
+
+    Args:
+        `start='F'` (str):
+            x
+        `rules='F F+F-F-F+F'` (str):
+            x
+        `level=4` (int):
+            x
+        `angle (float):
+            x
+        `length (float):
+            x
+        `thickness=1` (float):
+            x
+        `color=(255, 255, 255)` (Optional[Tuple[int, int, int]]):
+            x
+        `fill_color=(128, 128, 128)` (Optional[Tuple[int, int, int]]):
+            x
+        `background_color=None` (Optional[Tuple[int, int, int]]):
+            x
+        `colors=None` (Optional[Iterable[Optional[Tuple[int, int, int]]]]):
+            x
+        `position=(0, 0)` (Tuple[float, float]):
+            x
+        `heading=0` (float):
+            x
+        `angle_increment=15` (float):
+            x
+        `length_increment=5` (float):
+            x
+        `length_scalar=2` (float):
+            x
+        `thickness_increment=1` (float):
+            x
+        `red_increment=1` (int):
+            x
+        `green_increment=1` (int):
+            x
+        `blue_increment=1` (int):
+            x
+        `scale=1'` (float):
+            x
+        `prefix=''` (str):
+            x
+        `suffix=''` (str):
+            x
+        `asap=False` (bool):
+            x
+        `speed=0` (Union[int, str]):
+            x
+        `show_turtle=False` (bool):
+            x
+        `turtle_shape='classic'` (str):
+            x
+        `full_circle=360` (float):
+            x
+        `skip_init=False` (bool):
+            x
+        `png=None` (Optional[str]):
+            x
+        `padding=10` (Optional[int]):
+            x
+        `output_scale=1` (float):
+            x
+        `antialiasing=4` (int):
+            x
+        `transparent=False` (bool):
+            x
+        `gif=None` (Optional[str]):
+            x
+        `draws_per_frame=1` (int):
+            x
+        `max_frames=100` (int):
+            x
+        `duration=20` (int):
+            x
+        `pause=500` (int):
+            x
+        `defer=0` (int):
+            x
+        `loops=None` (Optional[int]):
+            x
+        `reverse=False` (bool):
+            x
+        `alternate=False` (bool):
+            x
+        `optimize=True` (bool):
+            x
+        `tmpdir=None` (Optional[str]):
+            x
+
+    Returns:
+        Optional[Tuple[str, turtle.Turtle]]:
+            x
+    """
     global _DRAW_NUMBER
     _DRAW_NUMBER += 1
     if _WAITED:
@@ -688,7 +783,7 @@ def run(  # pylint: disable=too-many-branches,too-many-statements
 
 if __name__ == '__main__':
     init((600, 600), ghostscript='')
-    draw('A', 'A 0B-2A-3B B 4A+5B+6A', 60, 8, 5, 2, heading=150, position=(200, 00), red_increment=-2,
+    draw('A', 'A 0B-2A-3B B 4A+5B+6A', 4, 60, 8,  2, heading=150, position=(200, 00), red_increment=-2,
          color=None,
          png='', max_frames=500, draws_per_frame=20, alternate=False, thickness_increment=2,
          padding=None,  speed=10, asap=False, reverse=False, tmpdir='', show_turtle=False,
