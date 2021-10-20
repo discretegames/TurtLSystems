@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Callable, List, Dict, Tuple, Iterable, Sequence, Optional, Union, cast
 from tempfile import TemporaryDirectory
 from contextlib import ExitStack
+from tkinter import TclError
 from shutil import copyfile
 from string import digits
 from PIL import Image
@@ -84,7 +85,9 @@ def init(
     delay: Optional[int] = None,
     silent: bool = False
 ) -> None:
-    """Sets global TurtLSystems properties. Calling this is optional.
+    """Initializes global TurtLSystems properties.
+    Calling this is optional and only needed when customization is desired.
+    If used it should only be called once and placed before all calls to `draw` and `wait.`
 
     Args:
         `window_size=(0.75, 0.75)` (Tuple[int | float, int | float]):
@@ -109,6 +112,8 @@ def init(
             Turtle graphics animation delay in milliseconds. None for default value.
         `silent=False` (bool):
             Whether to silence all messages and warnings produced by TurtLSystems.
+
+    Returns nothing.
     """
     global _SILENT, _GHOSTSCRIPT, _INITIALIZED
     _SILENT = silent
@@ -136,13 +141,13 @@ def init(
     _INITIALIZED = True
 
 
-# Horrendously long function that started small and kept getting bigger and bigger. Can't be bothered to refactor.
+# Horrendously long function, I know, but can't be bothered to refactor.
 def draw(  # pylint: disable=too-many-branches,too-many-statements
     # Positional args:
-    start: str = 'F',
-    rules: str = 'F F+F-F-F+F',
+    start: str = 'F+G+G',
+    rules: str = 'F F+G-F-G+F G GG',
     level: int = 4,
-    angle: float = 90,
+    angle: float = 120,
     length: float = 20,
     thickness: float = 1,
     color: Optional[Tuple[int, int, int]] = (255, 255, 255),
@@ -159,7 +164,7 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
     suffix: str = '',
     max_chars: Optional[int] = None,
     # Turtle args:
-    speed: Union[int, str] = 0,
+    speed: Union[int, str] = 'fastest',
     show_turtle: bool = False,
     turtle_shape: str = 'classic',
     full_circle: float = 360,
@@ -202,16 +207,20 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
     skip_init: bool = False,
     callback: Optional[Callable[[str, turtle.Turtle], Optional[bool]]] = None,
 ) -> Tuple[str, Optional[turtle.Turtle]]:
-    """Todo fill out descriptions.
+    """Opens a turtle graphics window and draws an L-system pattern based on the arguments provided.
+    All arguments are optional but `start` and `rules` are the most important because they define the L-system.
+    May be called multiple times.
+
+    Call `draw()` by itself to see an example Sierpinski triangle pattern.
 
     Positional args:
-        `start='F'` (str):
+        `start='F+G+G'` (str):
             x
-        `rules='F F+F-F-F+F'` (str):
+        `rules='F F+G-F-G+F G GG'` (str):
             x
         `level=4` (int):
             x
-        `angle=90` (float):
+        `angle=120` (float):
             x
         `length=20` (float):
             x
@@ -320,9 +329,9 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
             x
         `callback=None` (Optional[Callable[[str, turtle.Turtle], Optional[bool]]]):
             x
-    Returns:
-        Optional[Tuple[str, turtle.Turtle]]:
-            x
+
+    Returns tuple of the final L-system string and the turtle graphics Turtle object used to draw the pattern.
+    (Tuple[str, Optional[turtle.Turtle]])
     """
     global _DRAW_NUMBER, _GHOSTSCRIPT
     _DRAW_NUMBER += 1
@@ -474,13 +483,16 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
 
 
 def wait(exit_on_click: bool = True, *, skip_init: bool = False) -> None:
-    """Keeps draw window open. Calling this is optional. If used it must be placed last after all calls to `draw`.
+    """Keeps draw window open. Calling this is optional.
+    If used it should only be called once and be placed last after all calls to `draw`.
 
     Args:
         `exit_on_click=True` (bool):
             Whether the window can be closed by clicking anywhere.
         `skip_init=False` (bool):
             For advanced use. Whether to skip calling `init` when it hasn't been called already.
+
+    Returns nothing.
     """
     if not skip_init and not _INITIALIZED:
         init()
@@ -920,23 +932,8 @@ def run(  # pylint: disable=too-many-branches,too-many-statements
 
 
 if __name__ == '__main__':
-    # s = []
-    # init((600, 600), ghostscript='')
-    # ss, tt = draw('A', 'A 0B-2A-3B B 4A+5B+6A', 0, 60, 8,  2, heading=150, position=(200, 00), red_increment=-2,
-    #               color=None, tmpdir='tmp', text='text test', font='Consolas', font_type='italic',
-    #               callback=lambda c, t: s.append(c), prefix='FFF',
-    #               png='', max_frames=500, draws_per_frame=20, alternate=False, thickness_increment=2,
-    #               padding=None,  speed=10, asap=False, reverse=False, show_turtle=False,
-    #               turtle_shape='turtle', duration=30, output_scale=2,
-    #               max_chars=20)
-    # print(len(s), ''.join(s))
-    # print(ss)
-    # wait()
-    # init()
-    # s, t = draw(speed=1, level=2, skip_init=True, color=(255, 0, 0))
-    init((800, 800), background_color=(0, 26, 0))
-    draw('F', 'F F+F-', 6, 90, 20,
-         tmpdir='tmp', png='tmp/growth', gif='tmp/growth', text='Growth Test', asap=True, growth=True, duration=70,
-         show_turtle=True, turtle_shape='turtle', padding=-10, draws_per_frame=6, background_color=None,
-         alternate=True, pause=0)
-    # wait()
+    try:
+        draw()
+        wait()
+    except (turtle.Terminator, TclError):
+        message('Window manually closed before draws were complete.')
