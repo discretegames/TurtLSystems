@@ -1,10 +1,11 @@
 """Core source code file of turtlsystems Python package (https://pypi.org/project/turtlsystems)."""
 
 import os
+from tkinter.constants import NO
 import turtle
 import subprocess
 from pathlib import Path
-from typing import Any, Callable, List, Dict, Tuple, Iterable, Sequence, Optional, Union, cast
+from typing import Any, Callable, List, Dict, Tuple, Iterable, Collection, Sequence, Optional, Union, cast
 from tempfile import TemporaryDirectory
 from contextlib import ExitStack
 from tkinter import TclError
@@ -90,27 +91,27 @@ def init(
     If used it should only be called once and placed before all calls to `draw` and `wait.`
 
     Args:
-        `window_size=(0.75, 0.75)` (Tuple[int | float, int | float]):
-            The size of the draw window as int pixel dimensions or float screen proportions.
-        `window_title="TurtLSystems"` (str):
-            The title of the draw window.
-        `background_color=(0, 0, 0)` (Tuple[int, int, int]):
-            0-255 rgb triplet to use as draw window background color. May be changed later by draw calls.
-        `background_image=None` (Optional[str]):
-            Path to a background image to use in the draw window.
-        `window_position=None` (Optional[Tuple[Optional[int], Optional[int]]]):
+        ● `window_size=(0.75, 0.75)` (Tuple[int | float, int | float]):
+            The size of the window as int pixel dimensions or float screen proportions.
+        ● `window_title="TurtLSystems"` (str):
+            The title of the window.
+        ● `background_color=(0, 0, 0)` (Tuple[int, int, int]):
+            0-255 rgb tuple for window background color. May be changed later by draw calls.
+        ● `background_image=None` (Optional[str]):
+            Path to a background image to use in the window.
+        ● `window_position=None` (Optional[Tuple[Optional[int], Optional[int]]]):
             The top and left screen coordinates of the window, or None for centered.
-        `canvas_size=None` (Optional[Tuple[Optional[int], Optional[int]]]):
+        ● `canvas_size=None` (Optional[Tuple[Optional[int], Optional[int]]]):
             The size of the draw canvas when larger than the window size is desired.
-        `ghostscript=None` (Optional[str]):
+        ● `ghostscript=None` (Optional[str]):
             The path or command name of ghostscript such as 'gs'.
             When None an OS-based guess is made that works best on Windows.
             Ghostscript is required for png and gif output.
-        `mode='standard'` (str):
+        ● `mode='standard'` (str):
             Turtle graphics coordinates mode. Either 'standard' or 'logo'.
-        `delay=None` (Optional[int]):
+        ● `delay=None` (Optional[int]):
             Turtle graphics animation delay in milliseconds. None for default value.
-        `silent=False` (bool):
+        ● `silent=False` (bool):
             Whether to silence all messages and warnings produced by TurtLSystems.
 
     Returns nothing.
@@ -145,7 +146,7 @@ def init(
 def draw(  # pylint: disable=too-many-branches,too-many-statements
     # Positional args:
     start: str = 'F+G+G',
-    rules: str = 'F F+G-F-G+F G GG',
+    rules: Union[Dict[str, str], str] = 'F F+G-F-G+F G GG',
     level: int = 4,
     angle: float = 120,
     length: float = 20,
@@ -167,7 +168,7 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
     speed: Union[int, str] = 'fastest',
     show_turtle: bool = False,
     turtle_shape: str = 'classic',
-    full_circle: float = 360,
+    circle: float = 360,
     # Increment args:
     angle_increment: float = 15,
     length_increment: float = 5,
@@ -192,7 +193,7 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
     output_scale: float = 1,
     # Gif args:
     gif: Optional[str] = None,
-    draws_per_frame: int = 1,
+    frame_every: Union[int, Collection[str]] = 1,
     max_frames: int = 100,
     duration: int = 20,
     pause: int = 500,
@@ -208,128 +209,143 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
     callback: Optional[Callable[[str, turtle.Turtle], Optional[bool]]] = None,
 ) -> Tuple[str, Optional[turtle.Turtle]]:
     """Opens a turtle graphics window and draws an L-system pattern based on the arguments provided.
-    All arguments are optional but `start` and `rules` are the most important because they define the L-system.
-    May be called multiple times.
+    When called multiple times all patterns are drawn to the same canvas.
+
+    All arguments are optional but `start` and `rules` are the most important because they define the L-system,
+    and `level` defines how many expansion steps take place. On an expansion step, every character in `start` is
+    replaced with what it maps to in `rules` (or left unchanged if not present) resulting in a new string.
+    The characters of the string after the last expansion are the instructions the turtle follows to draw a pattern.
+    All non-whitespace printable ASCII characters have meaning. See the `lsystem` function documentation for specifics.
 
     Call `draw()` by itself to see an example Sierpinski triangle pattern.
 
     Positional args:
-        `start='F+G+G'` (str):
-            x
-        `rules='F F+G-F-G+F G GG'` (str):
-            x
-        `level=4` (int):
-            x
-        `angle=120` (float):
-            x
-        `length=20` (float):
-            x
-        `thickness=1` (float):
-            x
-        `color=(255, 255, 255)` (Optional[Tuple[int, int, int]]):
-            x
-        `fill_color=(128, 128, 128)` (Optional[Tuple[int, int, int]]):
-            x
-        `background_color=None` (Optional[Tuple[int, int, int]]):
-            x
-        `asap=False` (bool):
-            x
+        ● `start='F+G+G'` (str):
+            The initial string or axiom of the L-system. Level 0.
+        ● `rules='F F+G-F-G+F G GG'` (Dict[str, str] | str):
+            Dictionary that maps characters to what they are replaced with in the L-system expansion step.
+            May also be a string where whitespace separated pairs of substrings correspond to the character and its
+            replacement. For example `{'A': 'AB', 'B': 'B+A'}` and `'A AB B B+A'` represent the same rules.
+        ● `level=4` (int):
+            The number of L-system expansion steps to take, i.e. how many times to apply `rules` to `start`.
+        ● `angle=120` (float):
+            The angle to turn by on `+` or `-`. Defaults to degrees but can be changed with `circle`.
+        ● `length=20` (float):
+            The distance in pixels to move forward by on letters.
+        ● `thickness=1` (float):
+            Line width in pixels.
+        ● `color=(255, 255, 255)` (Optional[Tuple[int, int, int]]):
+            Line color. 0-255 rgb tuple or None to hide all lines. Selected on `0`.
+        ● `fill_color=(128, 128, 128)` (Optional[Tuple[int, int, int]]):
+            Fill color for `{...}` polygons `@` dots and turtle shapes.
+            0-255 rgb tuple or None to hide all fills. Selected on `1`.
+        ● `background_color=None` (Optional[Tuple[int, int, int]]):
+            0-255 rgb tuple for window background color or unchanged if None.
+        ● `asap=False` (bool):
+            When True the draw will happen as fast as possible.
+
     Customization args:
-        `colors=None` (Optional[Iterable[Optional[Tuple[int, int, int]]]]):
+        ● `colors=None` (Optional[Iterable[Optional[Tuple[int, int, int]]]]):
             x
-        `position=(0, 0)` (Tuple[float, float]):
+        ● `position=(0, 0)` (Tuple[float, float]):
             x
-        `heading=0` (float):
+        ● `heading=0` (float):
             x
-        `scale=1'` (float):
+        ● `scale=1'` (float):
             x
-        `prefix=''` (str):
+        ● `prefix=''` (str):
             x
-        `suffix=''` (str):
+        ● `suffix=''` (str):
             x
-        `max_chars=None` (Optional[int]):
-            x
-    Turtle args:
-        `speed='fastest'` (Union[int, str]):
-            x
-        `show_turtle=False` (bool):
-            x
-        `turtle_shape='classic'` (str):
-            x
-        `full_circle=360` (float):
-            x
-    Increment args:
-        `angle_increment=15` (float):
-            x
-        `length_increment=5` (float):
-            x
-        `length_scalar=2` (float):
-            x
-        `thickness_increment=1` (float):
-            x
-        `red_increment=1` (int):
-            x
-        `green_increment=1` (int):
-            x
-        `blue_increment=1` (int):
-            x
-    Text args:
-        `text=None` (Optional[str]):
-            x
-        `text_color=(255, 255, 255)` (Optional[Tuple[int, int, int]]):
-            x
-        `text_position=(0, -200)` (Tuple[int, int]):
-            x
-        `font='Arial` (str):
-            x
-        `font_size=16` (int):
-            x
-        `font_type='normal'` (str):
-            x
-        `align='center'` (str):
-            x
-    Png and gif frame args:
-        `png=None` (Optional[str]):
-            x
-        `padding=10` (Optional[int]):
-            x
-        `transparent=False` (bool):
-            x
-        `antialiasing=4` (int):
-            x
-        `output_scale=1` (float):
-            x
-    Gif args:
-        `gif=None` (Optional[str]):
-            x
-        `draws_per_frame=1` (int):
-            x
-        `max_frames=100` (int):
-            x
-        `duration=20` (int):
-            x
-        `pause=500` (int):
-            x
-        `defer=0` (int):
-            x
-        `loops=None` (Optional[int]):
-            x
-        `growth=False` (bool):
-            x
-        `reverse=False` (bool):
-            x
-        `alternate=False` (bool):
-            x
-        `optimize=True` (bool):
-            x
-    Advanced args:
-        `tmpdir=None` (Optional[str]):
-            x
-        `skip_init=False` (bool):
-            x
-        `callback=None` (Optional[Callable[[str, turtle.Turtle], Optional[bool]]]):
+        ● `max_chars=None` (Optional[int]):
             x
 
+    Turtle args:
+        ● `speed='fastest'` (int | str):
+            x
+        ● `show_turtle=False` (bool):
+            x
+        ● `turtle_shape='classic'` (str):
+            x
+        ● `circle=360` (float):
+            x
+
+    Increment args:
+        ● `angle_increment=15` (float):
+            x
+        ● `length_increment=5` (float):
+            x
+        ● `length_scalar=2` (float):
+            x
+        ● `thickness_increment=1` (float):
+            x
+        ● `red_increment=1` (int):
+            x
+        ● `green_increment=1` (int):
+            x
+        ● `blue_increment=1` (int):
+            x
+
+    Text args:
+        ● `text=None` (Optional[str]):
+            x
+        ● `text_color=(255, 255, 255)` (Optional[Tuple[int, int, int]]):
+            x
+        ● `text_position=(0, -200)` (Tuple[int, int]):
+            x
+        ● `font='Arial` (str):
+            x
+        ● `font_size=16` (int):
+            x
+        ● `font_type='normal'` (str):
+            x
+        ● `align='center'` (str):
+            x
+
+    Png and gif frame args:
+        ● `png=None` (Optional[str]):
+            x
+        ● `padding=10` (Optional[int]):
+            x
+        ● `transparent=False` (bool):
+            x
+        ● `antialiasing=4` (int):
+            x
+        ● `output_scale=1` (float):
+            x
+
+    Gif args:
+        ● `gif=None` (Optional[str]):
+            x
+        ● `frame_every=1` (int | Collection[str]):
+            x
+        ● `max_frames=100` (int):
+            x
+        ● `duration=20` (int):
+            x
+        ● `pause=500` (int):
+            x
+        ● `defer=0` (int):
+            x
+        ● `loops=None` (Optional[int]):
+            x
+        ● `growth=False` (bool):
+            x
+        ● `reverse=False` (bool):
+            x
+        ● `alternate=False` (bool):
+            x
+        ● `optimize=True` (bool):
+            x
+
+    Advanced args:
+        ● `tmpdir=None` (Optional[str]):
+            x
+        ● `skip_init=False` (bool):
+            x
+        ● `callback=None` (Optional[Callable[[str, turtle.Turtle], Optional[bool]]]):
+            x
+    ---
     Returns tuple of the final L-system string and the turtle graphics Turtle object used to draw the pattern.
     (Tuple[str, Optional[turtle.Turtle]])
     """
@@ -344,9 +360,9 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
     turtle.colormode(255)
     if background_color:
         turtle.bgcolor(background_color)
+    true_background_color = cast(Color, conform_color(turtle.bgcolor()))
 
     if png or gif:
-        true_background_color = cast(Color, conform_color(turtle.bgcolor()))
         if not _GHOSTSCRIPT:
             _GHOSTSCRIPT = guess_ghostscript()
             message(f'Guessed ghostscript to be "{_GHOSTSCRIPT}".')
@@ -365,7 +381,7 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
                     None, lvl != level or asap, png=pngs[-1], padding=None, tmpdir=tmpdir,  # <-- Key differences.
                     colors=colors, position=position, heading=heading, scale=scale, output_scale=output_scale,
                     prefix=prefix, suffix=suffix, max_chars=max_chars, speed=speed, show_turtle=show_turtle,
-                    turtle_shape=turtle_shape, full_circle=full_circle, angle_increment=angle_increment,
+                    turtle_shape=turtle_shape, circle=circle, angle_increment=angle_increment,
                     length_increment=length_increment, length_scalar=length_scalar,
                     thickness_increment=thickness_increment, red_increment=red_increment,
                     green_increment=green_increment, blue_increment=blue_increment, text=text,
@@ -419,17 +435,19 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
             t.write(text, False, align, (font, font_size, font_type))
         except Exception as e:  # pylint: disable=broad-except
             message('Unable to add text:', e)
+    t.pencolor(true_background_color)  # Ensure initial colors are tuples.
+    t.fillcolor(true_background_color)
     if show_turtle:
         t.showturtle()
     else:
         t.hideturtle()
     t.shape(turtle_shape)
-    t.degrees(full_circle)
+    t.degrees(circle)
     t.speed(speed)
     position = scale * position[0], scale * position[1]
     orient(t, position, heading)
 
-    string = prefix + lsystem(start, make_rules(rules), level) + suffix
+    string = prefix + lsystem(start, rules, level) + suffix
     with ExitStack() as exit_stack:
         if png or gif:
             if not tmpdir:
@@ -439,7 +457,7 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
         eps_paths, size = run(t=t,
                               string=string,
                               colors=make_colors(color, fill_color, colors),
-                              full_circle=full_circle,
+                              circle=circle,
                               position=position,
                               heading=heading,
                               angle=angle,
@@ -452,7 +470,7 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
                               color_increments=(red_increment, green_increment, blue_increment),
                               max_chars=max_chars,
                               gif=gif,
-                              draws_per_frame=draws_per_frame,
+                              frame_every=frame_every,
                               max_frames=max_frames,
                               drawdir=drawdir if gif else None,
                               callback=callback)
@@ -483,13 +501,13 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
 
 
 def wait(exit_on_click: bool = True, *, skip_init: bool = False) -> None:
-    """Keeps draw window open. Calling this is optional.
-    If used it should only be called once and be placed last after all calls to `draw`.
+    """Keeps window open. Calling this is optional.
+    If used it should only be called once and be placed after all calls to `draw`.
 
     Args:
-        `exit_on_click=True` (bool):
+        ● `exit_on_click=True` (bool):
             Whether the window can be closed by clicking anywhere.
-        `skip_init=False` (bool):
+        ● `skip_init=False` (bool):
             For advanced use. Whether to skip calling `init` when it hasn't been called already.
 
     Returns nothing.
@@ -499,8 +517,22 @@ def wait(exit_on_click: bool = True, *, skip_init: bool = False) -> None:
     global _WAITED
     if not _WAITED:
         _WAITED = True
-        message('Waiting for user to close window...', flush=True)
         (turtle.exitonclick if exit_on_click else turtle.done)()
+
+
+def lsystem(start: str, rules: Union[Dict[str, str], str], level: int) -> str:
+    """Expands the L-system string `start` according to `rules` `level` number of times, returning the result.
+
+    When the L-system is run, every non-whitespace printable ASCII character has meaning. TODO
+    ```
+    TODO
+    ```
+    """
+    if isinstance(rules, str):
+        rules = make_rules(rules)
+    for _ in range(level):
+        start = ''.join(rules.get(c, c) for c in start)
+    return start
 
 
 ####################
@@ -512,13 +544,6 @@ def message(*args: Any, **kwargs: Any) -> None:
     """Alias for `print` but only runs when not silenced."""
     if not _SILENT:
         print(*args, **kwargs)
-
-
-def lsystem(start: str, rules: Dict[str, str], level: int) -> str:
-    """Iterates L-system initialzed to `start` based on `rules` `level` number of times."""
-    for _ in range(level):
-        start = ''.join(rules.get(c, c) for c in start)
-    return start
 
 
 def clamp(value: int, minimum: int = 0, maximum: int = 255) -> int:
@@ -533,7 +558,7 @@ def conform_color(color: Optional[Sequence[float]]) -> OpColor:
     return None
 
 
-def make_rules(rules: Union[str, Dict[str, str]]) -> Dict[str, str]:
+def make_rules(rules: Union[Dict[str, str], str]) -> Dict[str, str]:
     """Creates rules dict."""
     if isinstance(rules, str):
         split = rules.split()
@@ -747,7 +772,7 @@ def run(  # pylint: disable=too-many-branches,too-many-statements
     t: turtle.Turtle,
     string: str,
     colors: Tuple[OpColor, ...],
-    full_circle: float,
+    circle: float,
     position: Tuple[float, float],
     heading: float,
     angle: float,
@@ -760,7 +785,7 @@ def run(  # pylint: disable=too-many-branches,too-many-statements
     color_increments: Tuple[int, int, int],
     max_chars: Optional[int],
     gif: Optional[str],
-    draws_per_frame: int,
+    frame_every: Union[int, Collection[str]],
     max_frames: int,
     drawdir: Optional[Path],
     callback: Optional[Callable[[str, turtle.Turtle], Optional[bool]]]
@@ -786,7 +811,7 @@ def run(  # pylint: disable=too-many-branches,too-many-statements
         if gif:
             nonlocal draws
             draws += 1
-            if draws % draws_per_frame == 0:
+            if isinstance(frame_every, int) and draws % frame_every == 0:
                 save_frame()
 
     def set_pensize() -> None:
@@ -813,8 +838,10 @@ def run(  # pylint: disable=too-many-branches,too-many-statements
             set_color((lst[0], lst[1], lst[2]))
 
     set_pensize()
-    t.pencolor(pen_color or (0, 0, 0))  # Or with (0, 0, 0) to ensure colors are initially tuples, not strings.
-    t.fillcolor(fill_color or (0, 0, 0))
+    if pen_color:
+        t.pencolor(pen_color)
+    if fill_color:
+        t.fillcolor(fill_color)
     if gif:
         save_frame()
 
@@ -853,7 +880,7 @@ def run(  # pylint: disable=too-many-branches,too-many-statements
         elif c == '&':
             swap_signs = not swap_signs
         elif c == '|':
-            t.right(full_circle/2.0)
+            t.right(circle/2.0)
         elif c == '~':
             angle = initial_angle
         elif c == ')':
@@ -917,14 +944,15 @@ def run(  # pylint: disable=too-many-branches,too-many-statements
                 angle, length = state.angle, state.length
                 swap_signs, swap_cases, modify_fill = state.swap_signs, state.swap_cases, state.modify_fill
                 pen_color, fill_color = state.pen_color, state.fill_color
-        elif c == '\\':
-            break
 
-        if callback and callback(c, t):
+        if not isinstance(frame_every, int) and c in frame_every:
+            save_frame()
+
+        if callback and callback(c, t) or c == '\\':
             break
 
     if gif:
-        if draws % draws_per_frame != 0:
+        if isinstance(frame_every, int) and draws % frame_every != 0:
             save_frame()  # Save frame of final changes unless nothing has changed.
         message(f'Prepped {len(eps_paths)} gif frames of {frames_attempted} attempted for {draws + 1} draws.')
 
@@ -933,7 +961,11 @@ def run(  # pylint: disable=too-many-branches,too-many-statements
 
 if __name__ == '__main__':
     try:
+        # draw('>>>>>@<<<<<D@D@DF', 'F FG G G+F', 3, length=20, asap=True, gif='neat', frame_every=20, show_turtle=True,
+        #      turtle_shape='turtle', color=(0, 0, 200), fill_color=None, background_color=(23, 0, 0),
+        #      thickness=10)
+        # draw(frame_every='^', gif='outint', png='foo')
         draw()
         wait()
     except (turtle.Terminator, TclError):
-        message('Window manually closed before draws were complete.')
+        pass
