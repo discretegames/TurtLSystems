@@ -147,7 +147,7 @@ def init(
 def draw(  # pylint: disable=too-many-branches,too-many-statements
     # Positional args:
     start: str = 'F+G+G',
-    rules: Union[Dict[str, str], str] = 'F {F+{G}-F}-G+F G GG',  # TODO back to normal
+    rules: Union[Dict[str, str], str] = 'F F+G-F-G+F G GG',
     level: int = 4,
     angle: float = 120,
     length: float = 20,
@@ -237,30 +237,30 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
             The distance in pixels to move forward by on letters.
         - `thickness=1` (float):
             The line width in pixels. May be any non-negative number.
-        - `color=(255, 255, 255)` (Optional[Tuple[int, int, int]]):
+        - `color=(255, 255, 255)` (Tuple[int, int, int] | None):
             The line color. A 0-255 rgb tuple or None to hide all lines. Reselected on `0`.
-        - `fill_color=(128, 128, 128)` (Optional[Tuple[int, int, int]]):
+        - `fill_color=(128, 128, 128)` (Tuple[int, int, int] | None):
             The fill color for `{}` polygons `@` dots and turtle shapes. A 0-255 rgb tuple or None to hide all fills.
             Reselected on `1`.
-        - `background_color=None` (Optional[Tuple[int, int, int]]):
+        - `background_color=None` (Tuple[int, int, int] | None):
             The background color of the window. A 0-255 rgb tuple or None to leave unchanged.
         - `asap=False` (bool):
             When True the draw will happen as fast as possible.
 
     Customization args:
-        - `colors=None` (Optional[Iterable[Optional[Tuple[int, int, int]]]]):
+        - `colors=None` (Iterable[Tuple[int, int, int] | None] | None):
             x
         - `position=(0, 0)` (Tuple[float, float]):
-            x
+            The initial (x, y) position of the turtle.
         - `heading=0` (float):
-            x
+            The initial angle the turtle points in.
         - `scale=1'` (float):
-            x
+            The factor to scale everything by. May be negative
         - `prefix=''` (str):
             x
         - `suffix=''` (str):
             x
-        - `max_chars=None` (Optional[int]):
+        - `max_chars=None` (int | None):
             x
 
     Turtle args:
@@ -290,9 +290,9 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
             x
 
     Text args:
-        - `text=None` (Optional[str]):
+        - `text=None` (str | None):
             x
-        - `text_color=(255, 255, 255)` (Optional[Tuple[int, int, int]]):
+        - `text_color=(255, 255, 255)` (Tuple[int, int, int] | None):
             x
         - `text_position=(0, -200)` (Tuple[int, int]):
             x
@@ -306,9 +306,9 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
             x
 
     Png and gif frame args:
-        - `png=None` (Optional[str]):
+        - `png=None` (str | None):
             x
-        - `padding=10` (Optional[int]):
+        - `padding=10` (int | None):
             x
         - `transparent=False` (bool):
             x
@@ -318,7 +318,7 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
             x
 
     Gif args:
-        - `gif=None` (Optional[str]):
+        - `gif=None` (str | None):
             x
         - `frame_every=1` (int | Collection[str]):
             x
@@ -330,7 +330,7 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
             x
         - `defer=0` (int):
             x
-        - `loops=None` (Optional[int]):
+        - `loops=None` (int | None):
             x
         - `growth=False` (bool):
             x
@@ -342,11 +342,11 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
             x
 
     Advanced args:
-        - `tmpdir=None` (Optional[str]):
+        - `tmpdir=None` (str | None):
             x
         - `skip_init=False` (bool):
             x
-        - `callback=None` (Optional[Callable[[str, turtle.Turtle], Optional[bool]]]):
+        - `callback=None` (Callable[[str, turtle.Turtle], bool | None] | None):
             x
     ---
     Returns a 2-tuple of the final L-system string and the turtle graphics Turtle object used to draw the pattern.
@@ -391,7 +391,6 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
                     text_color=text_color, text_position=text_position, font=font, font_size=font_size,
                     font_type=font_type, align=align, transparent=transparent, antialiasing=antialiasing
                 )
-                lvl_t = cast(turtle.Turtle, lvl_t)
                 if lvl != level:
                     lvl_t.clear()
                     lvl_t.hideturtle()
@@ -465,11 +464,11 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
                               heading=heading,
                               angle=angle,
                               length=scale*length,
-                              thickness=scale*thickness,
+                              thickness=abs(scale) * thickness,
                               angle_increment=angle_increment,
                               length_increment=scale*length_increment,
-                              length_scalar=scale*length_scalar,
-                              thickness_increment=scale*thickness_increment,
+                              length_scalar=length_scalar,
+                              thickness_increment=abs(scale)*thickness_increment,
                               color_increments=(red_increment, green_increment, blue_increment),
                               max_chars=max_chars,
                               gif=gif,
@@ -964,9 +963,8 @@ def run(  # pylint: disable=too-many-branches,too-many-statements
 
 if __name__ == '__main__':
     try:
-        init((600, 800))
-        draw(png='1')
-        draw(thickness=1.5, png='2')
+        draw(scale=.5, asap=True, position=(100, 10))
+        draw(scale=-1, asap=True, position=(100, 10))
         wait()
     except (turtle.Terminator, TclError):
         pass
