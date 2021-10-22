@@ -270,7 +270,7 @@ _       Reset length step back to its initial value.
 \       Stop executing all instructions immediately.
 ```
 
-Any characters not mentioned are ignored and have no effect.
+Any characters not mentioned are ignored and have no effect.  
 Many of the instructions are based on [Paul Bourke's 1991 *L-System User Notes*][paul].
 
 [pypi]: https://pypi.org/project/turtlsystems/

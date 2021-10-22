@@ -3,14 +3,18 @@
 from pathlib import Path
 from setuptools import setup, find_packages
 
-VERSION = "0.0.5"
+VERSION = "0.0.6"
 
 with open(Path(__file__).with_name('README.md'), encoding='utf-8') as file:
     long_description = file.read()
 
-setup(name='turtlsystems', version=VERSION, author='discretegames',
+setup(name='turtlsystems',
+      version=VERSION,
+      author='discretegames',
+      author_email='discretizedgames@gmail.com',
       url='https://github.com/discretegames/turtlsystems',
       long_description=long_description,
       long_description_content_type="text/markdown",
       packages=find_packages('src'),
-      package_dir={'': 'src'})
+      package_dir={'': 'src'},
+      license="MIT")
