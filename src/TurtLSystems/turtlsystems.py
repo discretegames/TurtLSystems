@@ -117,6 +117,9 @@ def init(
             Whether to silence all messages and warnings produced by TurtLSystems.
 
     Returns nothing.
+
+    ---
+    Documentation available on a single page at https://github.com/discretegames/turtlsystems#init
     """
     global _SILENT, _GHOSTSCRIPT, _INITIALIZED
     _SILENT = silent
@@ -384,9 +387,12 @@ def draw(
             Two arguments are given, the current character and the Turtle object. If True is returned the turtle stops.
         - `skip_init=False` (bool):
             Whether to skip calling `init` when it hasn't been called already.
-    ---
+
     Returns a 2-tuple of the final L-system string and the turtle graphics Turtle object used to draw the pattern.
     (Tuple[str, turtle.Turtle])
+
+    ---
+    Documentation available on a single page at https://github.com/discretegames/turtlsystems#draw
     """
     global _DRAW_NUMBER, _GHOSTSCRIPT
     _DRAW_NUMBER += 1
@@ -550,6 +556,9 @@ def wait(exit_on_click: bool = True, *, skip_init: bool = False) -> None:
             For advanced use. Whether to skip calling `init` when it hasn't been called already.
 
     Returns nothing.
+
+    ---
+    Documentation available on a single page at https://github.com/discretegames/turtlsystems#wait
     """
     if not skip_init and not _INITIALIZED:
         init()
@@ -603,6 +612,10 @@ def lsystem(start: str, rules: Union[Dict[str, str], str], level: int) -> str:
     \\       Stop executing all instructions immediately.
     ```
     All characters not mentioned are ignored and have no effect.
+    Many of the instructions are based on Paul Bourke's 1991 "L-System User Notes": http://paulbourke.net/fractals/lsys
+
+    ---
+    Documentation available on a single page at https://github.com/discretegames/turtlsystems#lsystem
     """
     if isinstance(rules, str):
         rules = make_rules(rules)
@@ -1039,5 +1052,5 @@ if __name__ == '__main__':
     try:
         draw()
         wait()
-    except (turtle.Terminator, TclError):
+    except (turtle.Terminator, tkinter.TclError, KeyboardInterrupt):
         pass
