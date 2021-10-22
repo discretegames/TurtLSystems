@@ -1,7 +1,6 @@
 """Core source code file of turtlsystems Python package (https://pypi.org/project/turtlsystems)."""
 
 import os
-from tkinter.constants import NO
 import turtle
 import subprocess
 from pathlib import Path
@@ -165,6 +164,7 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
     prefix: str = '',
     suffix: str = '',
     max_chars: Optional[int] = None,
+    max_draws: Optional[int] = None,
     # Turtle args:
     speed: Union[int, str] = 'fastest',
     show_turtle: bool = False,
@@ -195,7 +195,7 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
     # Gif args:
     gif: Optional[str] = None,
     frame_every: Union[int, Collection[str]] = 1,
-    max_frames: int = 100,
+    max_frames: Optional[int] = 100,
     duration: int = 20,
     pause: int = 500,
     defer: int = 0,
@@ -203,7 +203,6 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
     growth: bool = False,
     reverse: bool = False,
     alternate: bool = False,
-    optimize: bool = True,
     # Advanced args:
     tmpdir: Optional[str] = None,
     skip_init: bool = False,
@@ -214,9 +213,9 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
 
     All arguments are optional but `start` and `rules` are the most important because they define the L-system,
     and `level` defines how many expansion steps take place. On an expansion step, every character in `start` is
-    replaced with what it maps to in `rules` (or left unchanged if not present) resulting in a new string.
-    The characters of the string after the last expansion are the instructions the turtle follows to draw a pattern.
-    All non-whitespace printable ASCII characters have meaning. See the `lsystem` function documentation for specifics.
+    replaced with what it maps to in `rules` (or left unchanged if not present) resulting in a new `start` string.
+    The characters of `start` after the last expansion are the instructions the turtle follows to draw a pattern.
+    See the `lsystem` function documentation for specifics on what each character does as an instruction.
 
     Call `draw()` by itself to see an example Sierpinski triangle pattern.
 
@@ -240,7 +239,7 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
         - `color=(255, 255, 255)` (Tuple[int, int, int] | None):
             The line color. A 0-255 rgb tuple or None to hide all lines. Reselected on `0`.
         - `fill_color=(128, 128, 128)` (Tuple[int, int, int] | None):
-            The fill color for `{}` polygons `@` dots and turtle shapes. A 0-255 rgb tuple or None to hide all fills.
+            The fill color for `{}` polygons, `@` dots, and turtle shapes. A 0-255 rgb tuple or None to hide all fills.
             Reselected on `1`.
         - `background_color=None` (Tuple[int, int, int] | None):
             The background color of the window. A 0-255 rgb tuple or None to leave unchanged.
@@ -255,13 +254,16 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
         - `heading=0` (float):
             The initial angle the turtle points in.
         - `scale=1'` (float):
-            The factor to scale everything by. May be negative
+            A factor to scale the size of the pattern by. May be negative.
+            Specifically, `length`, `position`, and `length_increment` are multiplied by `scale`
+            and `thickness` and `thickness_increment` are multiplied by `abs(scale)`.
         - `prefix=''` (str):
-            x
+            An L-system string that does not undergo expansion prepended to the fully expanded `start` string.
         - `suffix=''` (str):
-            x
+            An L-system string that does not undergo expansion appended to the fully expanded `start` string
         - `max_chars=None` (int | None):
-            x
+            The maximum number of characters in the final L-system string (`prefix` + expanded `start` + `suffix`)
+            to follow the instructions for, or None for no limit.
 
     Turtle args:
         - `speed='fastest'` (int | str):
@@ -337,8 +339,6 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
         - `reverse=False` (bool):
             x
         - `alternate=False` (bool):
-            x
-        - `optimize=True` (bool):
             x
 
     Advanced args:
@@ -418,7 +418,7 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
                 except Exception as e:  # pylint: disable=broad-except
                     message('Unable to save png:', e)
             try:
-                save_gif(gif, pngs, transparent, duration, pause, defer, loops, reverse, alternate, optimize)
+                save_gif(gif, pngs, transparent, duration, pause, defer, loops, reverse, alternate)
                 message(f'Saved growth gif "{gif}".')
             except Exception as e:  # pylint: disable=broad-except
                 message('Unable to save growth gif:', e)
@@ -471,6 +471,7 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
                               thickness_increment=abs(scale)*thickness_increment,
                               color_increments=(red_increment, green_increment, blue_increment),
                               max_chars=max_chars,
+                              max_draws=max_draws,
                               gif=gif,
                               frame_every=frame_every,
                               max_frames=max_frames,
@@ -490,7 +491,7 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
             try:
                 pngs = prep_gif(eps_paths, size, true_background_color,
                                 output_scale, antialiasing, padding, transparent)
-                save_gif(gif, pngs, transparent, duration, pause, defer, loops, reverse, alternate, optimize)
+                save_gif(gif, pngs, transparent, duration, pause, defer, loops, reverse, alternate)
                 message(f'Saved gif "{gif}".')
             except Exception as e:  # pylint: disable=broad-except
                 message('Unable to save gif:', e)
@@ -752,8 +753,7 @@ def save_gif(
     defer: int,
     loops: Optional[int],
     reverse: bool,
-    alternate: bool,
-    optimize: bool,
+    alternate: bool
 ) -> str:
     """Saves gif from pre-generated png files. Returns path to gif."""
     images = [Image.open(png).convert('RGBA') for png in pngs]
@@ -764,7 +764,7 @@ def save_gif(
     gif = str(Path(gif).with_suffix(GIF_EXT).resolve())
     frames = [images[0]] * (defer // duration) + images + [images[-1]] * (pause // duration)
     frames[0].save(gif, save_all=True, append_images=frames[1:], loop=loops or 0, duration=duration,
-                   optimize=optimize, transparency=0 if transparent else 255)
+                   optimize=True, transparency=0 if transparent else 255)
     # PIL seems to treat blank animated gifs like static gifs, so their timing is wrong. But nbd since they're blank.
     return gif
 
@@ -786,9 +786,10 @@ def run(  # pylint: disable=too-many-branches,too-many-statements
     thickness_increment: float,
     color_increments: Tuple[int, int, int],
     max_chars: Optional[int],
+    max_draws: Optional[int],
     gif: Optional[str],
     frame_every: Union[int, Collection[str]],
-    max_frames: int,
+    max_frames: Optional[int],
     drawdir: Optional[Path],
     callback: Optional[Callable[[str, turtle.Turtle], Optional[bool]]]
 ) -> Tuple[List[str], Tuple[int, int]]:
@@ -804,15 +805,15 @@ def run(  # pylint: disable=too-many-branches,too-many-statements
     def save_frame() -> None:
         nonlocal frames_attempted, size
         frames_attempted += 1
-        if len(eps_paths) < max_frames:
+        if max_frames is None or len(eps_paths) < max_frames:
             eps = str((cast(Path, drawdir) / f'{FRAME_NAME}{len(eps_paths)}').with_suffix(EPS_EXT))
             size = save_eps(eps)
             eps_paths.append(eps)
 
-    def gif_handler() -> None:
+    def drew() -> None:
+        nonlocal draws
+        draws += 1
         if gif:
-            nonlocal draws
-            draws += 1
             if isinstance(frame_every, int) and draws % frame_every == 0:
                 save_frame()
 
@@ -848,7 +849,7 @@ def run(  # pylint: disable=too-many-branches,too-many-statements
         save_frame()
 
     for i, c in enumerate(string):
-        if max_chars is not None and i >= max_chars:
+        if max_chars is not None and i >= max_chars or max_draws is not None and draws >= max_draws:
             break
         if swap_cases and c.isalpha():
             c = c.lower() if c.isupper() else c.upper()
@@ -860,7 +861,7 @@ def run(  # pylint: disable=too-many-branches,too-many-statements
             else:
                 t.penup()
             t.forward(length)
-            gif_handler()
+            drew()
         elif 'a' <= c <= 'z':
             t.penup()
             t.forward(length)
@@ -923,11 +924,11 @@ def run(  # pylint: disable=too-many-branches,too-many-statements
         elif c == '}':
             if fill_color:
                 t.end_fill()
-            gif_handler()
+            drew()
         elif c == '@':
             if fill_color:
                 t.dot(None, fill_color)
-            gif_handler()
+            drew()
         elif c == '`':
             swap_cases = not swap_cases
         elif c == '"':
@@ -963,7 +964,7 @@ def run(  # pylint: disable=too-many-branches,too-many-statements
 
 if __name__ == '__main__':
     try:
-        draw(scale=.5, asap=True, position=(100, 10))
+        draw(scale=1, asap=True, position=(100, 10), max_draws=9)
         draw(scale=-1, asap=True, position=(100, 10))
         wait()
     except (turtle.Terminator, TclError):
