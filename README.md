@@ -58,17 +58,17 @@ Returns nothing.
 
 ### Arguments
 
-| Name /<br>Default /<br>Type | Description |
+| Name<br>Default | Description<br>Type |
 | ----------------------- | ----------- |
-| `window_size`<br>`(0.75, 0.75)`<br>`Tuple[int \| float, int \| float]` | The size of the window. Use integers for pixel dimensions. Use floats for a percentage of the screen size.
-| `window_title`<br>`"TurtLSystems"`<br>`str` | The title of the window.
-| `background_color`<br>`(0, 0, 0)`<br>`Tuple[int, int, int]` | The background color of the window. A 0-255 rgb tuple. May be changed later by draw calls.
-| `background_image`<br>`None`<br>`str \| None` | The file path to a background image for the window.
-| `window_position`<br>`None`<br>`Tuple[int \| None, int \| None] \| None` | The top and left screen coordinates of the window, or None for centered.
-| `canvas_size`<br>`None`<br>`Tuple[int \| None, int \| None] \| None` | The size of the drawing canvas when an area larger than the window size is desired.
-| `ghostscript`<br>`None`<br>`str \| None` | The path to or command name of ghostscript.             When None, an educated guess of the path is made on Windows and 'gs' is used on Mac/Linux.             Ghostscript is the image conversion tool required for png and gif output:             https://ghostscript.com/releases/gsdnld.html
-| `logo_mode`<br>`False`<br>`bool` | Whether the turtle graphics coordinates mode is 'standard' or 'logo'. Defaults to standard.             In standard mode an angle of 0 points rightward and positive angles go counterclockwise.             In logo mode an angle of 0 points upward and positive angles go clockwise.
-| `delay`<br>`None`<br>`int \| None` | The turtle graphics animation delay in milliseconds. None for default value.
+| window_size<br>`(0.75, 0.75)` | The size of the window. Use integers for pixel dimensions. Use floats for a percentage of the screen size.<br>`Tuple[int \| float, int \| float]`
+| window_title<br>`"TurtLSystems"` | The title of the window.<br>`str`
+| background_color<br>`(0, 0, 0)` | The background color of the window. A 0-255 rgb tuple. May be changed later by draw calls.<br>`Tuple[int, int, int]`
+| background_image<br>`None` | The file path to a background image for the window.<br>`str \| None`
+| window_position<br>`None` | The top and left screen coordinates of the window, or None for centered.<br>`Tuple[int \| None, int \| None] \| None`
+| canvas_size<br>`None` | The size of the drawing canvas when an area larger than the window size is desired.<br>`Tuple[int \| None, int \| None] \| None`
+| ghostscript<br>`None` | The path to or command name of ghostscript.             When None, an educated guess of the path is made on Windows and 'gs' is used on Mac/Linux.             Ghostscript is the image conversion tool required for png and gif output:             https://ghostscript.com/releases/gsdnld.html<br>`str \| None`
+| logo_mode<br>`False` | Whether the turtle graphics coordinates mode is 'standard' or 'logo'. Defaults to standard.             In standard mode an angle of 0 points rightward and positive angles go counterclockwise.             In logo mode an angle of 0 points upward and positive angles go clockwise.<br>`bool`
+| delay<br>`None` | The turtle graphics animation delay in milliseconds. None for default value.<br>`int \| None`
 
 ## Draw
 
@@ -89,15 +89,15 @@ In the descriptions below, "on X" is short for "when the character X is encounte
 
 | Name<br>Default<br>Type | Description |
 | ----------------------- | ----------- |
-| `start`<br>`'F+G+G'`<br>`str` | The initial string or axiom of the L-system. Level 0.
-| `rules`<br>`'F F+G-F-G+F G GG'`<br>`Dict[str, str] \| str` | Dictionary that maps characters to what they are replaced with in the L-system expansion step.             May also be a string where whitespace separated pairs of substrings correspond to the character and its             replacement. For example `{'A': 'AB', 'B': 'B+A'}` and `'A AB B B+A'` represent the same rules.
-| `level`<br>`4`<br>`int` | The number of L-system expansion steps to take, i.e. how many times to apply `rules` to `start`.
-| `angle`<br>`120`<br>`float` | The angle to turn by on `+` or `-`. In degrees by default but the `circle` arg can change that.
-| `length`<br>`20`<br>`float` | The distance in pixels to move forward by on letters. The length step.
-| `thickness`<br>`1`<br>`float` | The line width in pixels. May be any non-negative number.
-| `color`<br>`(255, 255, 255)`<br>`Tuple[int, int, int] \| None` | The line color. A 0-255 rgb tuple or None to hide all lines. Reselected on `0`.
-| `fill_color`<br>`(128, 128, 128)`<br>`Tuple[int, int, int] \| None` | The fill color for `{}` polygons, `@` dots, and turtle shapes. A 0-255 rgb tuple or None to hide all fills.             Reselected on `1`.
-| `background_color`<br>`None`<br>`Tuple[int, int, int] \| None` | The background color of the window. A 0-255 rgb tuple or None to leave unchanged.
+| start<br>`'F+G+G'`<br>`str` | The initial string or axiom of the L-system. Level 0.
+| rules<br>`'F F+G-F-G+F G GG'`<br>`Dict[str, str] \| str` | Dictionary that maps characters to what they are replaced with in the L-system expansion step.             May also be a string where whitespace separated pairs of substrings correspond to the character and its             replacement. For example `{'A': 'AB', 'B': 'B+A'}` and `'A AB B B+A'` represent the same rules.
+| level<br>`4`<br>`int` | The number of L-system expansion steps to take, i.e. how many times to apply `rules` to `start`.
+| angle<br>`120`<br>`float` | The angle to turn by on `+` or `-`. In degrees by default but the `circle` arg can change that.
+| length<br>`20`<br>`float` | The distance in pixels to move forward by on letters. The length step.
+| thickness<br>`1`<br>`float` | The line width in pixels. May be any non-negative number.
+| color<br>`(255, 255, 255)`<br>`Tuple[int, int, int] \| None` | The line color. A 0-255 rgb tuple or None to hide all lines. Reselected on `0`.
+| fill_color<br>`(128, 128, 128)`<br>`Tuple[int, int, int] \| None` | The fill color for `{}` polygons, `@` dots, and turtle shapes. A 0-255 rgb tuple or None to hide all fills.             Reselected on `1`.
+| background_color<br>`None`<br>`Tuple[int, int, int] \| None` | The background color of the window. A 0-255 rgb tuple or None to leave unchanged.
 
 [pypi]: https://pypi.org/project/turtlsystems/
 [tpypi]: https://test.pypi.org/project/turtlsystems/
