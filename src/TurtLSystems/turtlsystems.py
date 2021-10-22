@@ -88,30 +88,31 @@ def init(
 ) -> None:
     """Initializes global TurtLSystems properties.
     Calling this is optional and only needed when customization is desired.
-    If used it should only be called once and placed before all calls to `draw` and `wait.`
+    If used it should only be called once and placed before all calls to `draw` and `wait`.
 
     Args:
-        ● `window_size=(0.75, 0.75)` (Tuple[int | float, int | float]):
-            The size of the window as int pixel dimensions or float screen proportions.
-        ● `window_title="TurtLSystems"` (str):
+        - `window_size=(0.75, 0.75)` (Tuple[int | float, int | float]):
+            The size of the window. Use integers for pixel dimensions. Use floats for a percentage of the screen size.
+        - `window_title="TurtLSystems"` (str):
             The title of the window.
-        ● `background_color=(0, 0, 0)` (Tuple[int, int, int]):
-            0-255 rgb tuple for window background color. May be changed later by draw calls.
-        ● `background_image=None` (Optional[str]):
-            Path to a background image to use in the window.
-        ● `window_position=None` (Optional[Tuple[Optional[int], Optional[int]]]):
+        - `background_color=(0, 0, 0)` (Tuple[int, int, int]):
+            The background color of the window as a 0-255 rgb tuple. May be changed later by draw calls.
+        - `background_image=None` (str | None):
+            The file path to a background image for the window.
+        - `window_position=None` (Tuple[int | None, int | None] | None):
             The top and left screen coordinates of the window, or None for centered.
-        ● `canvas_size=None` (Optional[Tuple[Optional[int], Optional[int]]]):
-            The size of the draw canvas when larger than the window size is desired.
-        ● `ghostscript=None` (Optional[str]):
-            The path or command name of ghostscript such as 'gs'.
-            When None an OS-based guess is made that works best on Windows.
-            Ghostscript is required for png and gif output.
-        ● `mode='standard'` (str):
-            Turtle graphics coordinates mode. Either 'standard' or 'logo'.
-        ● `delay=None` (Optional[int]):
-            Turtle graphics animation delay in milliseconds. None for default value.
-        ● `silent=False` (bool):
+        - `canvas_size=None` (Tuple[int | None, int | None] | None):
+            The size of the drawing canvas when an area larger than the window size is desired.
+        - `ghostscript=None` (str | None):
+            The path to or command name of ghostscript.
+            When None, an educated guess of the path is made on Windows and 'gs' is used on Mac/Linux.
+            Ghostscript is the image conversion tool required for png and gif output:
+            https://ghostscript.com/releases/gsdnld.html
+        - `mode='standard'` (str):
+            The turtle graphics coordinates mode. Either 'standard' or 'logo'.
+        - `delay=None` (int | None):
+            The turtle graphics animation delay in milliseconds. None for default value.
+        - `silent=False` (bool):
             Whether to silence all messages and warnings produced by TurtLSystems.
 
     Returns nothing.
@@ -146,7 +147,7 @@ def init(
 def draw(  # pylint: disable=too-many-branches,too-many-statements
     # Positional args:
     start: str = 'F+G+G',
-    rules: Union[Dict[str, str], str] = 'F F+G-F-G+F G GG',
+    rules: Union[Dict[str, str], str] = 'F {F+{G}-F}-G+F G GG',  # TODO back to normal
     level: int = 4,
     angle: float = 120,
     length: float = 20,
@@ -220,133 +221,133 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
     Call `draw()` by itself to see an example Sierpinski triangle pattern.
 
     Positional args:
-        ● `start='F+G+G'` (str):
+        - `start='F+G+G'` (str):
             The initial string or axiom of the L-system. Level 0.
-        ● `rules='F F+G-F-G+F G GG'` (Dict[str, str] | str):
+        - `rules='F F+G-F-G+F G GG'` (Dict[str, str] | str):
             Dictionary that maps characters to what they are replaced with in the L-system expansion step.
             May also be a string where whitespace separated pairs of substrings correspond to the character and its
             replacement. For example `{'A': 'AB', 'B': 'B+A'}` and `'A AB B B+A'` represent the same rules.
-        ● `level=4` (int):
+        - `level=4` (int):
             The number of L-system expansion steps to take, i.e. how many times to apply `rules` to `start`.
-        ● `angle=120` (float):
+        - `angle=120` (float):
             The angle to turn by on `+` or `-`. Defaults to degrees but can be changed with `circle`.
-        ● `length=20` (float):
+        - `length=20` (float):
             The distance in pixels to move forward by on letters.
-        ● `thickness=1` (float):
+        - `thickness=1` (float):
             Line width in pixels.
-        ● `color=(255, 255, 255)` (Optional[Tuple[int, int, int]]):
+        - `color=(255, 255, 255)` (Optional[Tuple[int, int, int]]):
             Line color. 0-255 rgb tuple or None to hide all lines. Selected on `0`.
-        ● `fill_color=(128, 128, 128)` (Optional[Tuple[int, int, int]]):
+        - `fill_color=(128, 128, 128)` (Optional[Tuple[int, int, int]]):
             Fill color for `{...}` polygons `@` dots and turtle shapes.
             0-255 rgb tuple or None to hide all fills. Selected on `1`.
-        ● `background_color=None` (Optional[Tuple[int, int, int]]):
+        - `background_color=None` (Optional[Tuple[int, int, int]]):
             0-255 rgb tuple for window background color or unchanged if None.
-        ● `asap=False` (bool):
+        - `asap=False` (bool):
             When True the draw will happen as fast as possible.
 
     Customization args:
-        ● `colors=None` (Optional[Iterable[Optional[Tuple[int, int, int]]]]):
+        - `colors=None` (Optional[Iterable[Optional[Tuple[int, int, int]]]]):
             x
-        ● `position=(0, 0)` (Tuple[float, float]):
+        - `position=(0, 0)` (Tuple[float, float]):
             x
-        ● `heading=0` (float):
+        - `heading=0` (float):
             x
-        ● `scale=1'` (float):
+        - `scale=1'` (float):
             x
-        ● `prefix=''` (str):
+        - `prefix=''` (str):
             x
-        ● `suffix=''` (str):
+        - `suffix=''` (str):
             x
-        ● `max_chars=None` (Optional[int]):
+        - `max_chars=None` (Optional[int]):
             x
 
     Turtle args:
-        ● `speed='fastest'` (int | str):
+        - `speed='fastest'` (int | str):
             x
-        ● `show_turtle=False` (bool):
+        - `show_turtle=False` (bool):
             x
-        ● `turtle_shape='classic'` (str):
+        - `turtle_shape='classic'` (str):
             x
-        ● `circle=360` (float):
+        - `circle=360` (float):
             x
 
     Increment args:
-        ● `angle_increment=15` (float):
+        - `angle_increment=15` (float):
             x
-        ● `length_increment=5` (float):
+        - `length_increment=5` (float):
             x
-        ● `length_scalar=2` (float):
+        - `length_scalar=2` (float):
             x
-        ● `thickness_increment=1` (float):
+        - `thickness_increment=1` (float):
             x
-        ● `red_increment=1` (int):
+        - `red_increment=1` (int):
             x
-        ● `green_increment=1` (int):
+        - `green_increment=1` (int):
             x
-        ● `blue_increment=1` (int):
+        - `blue_increment=1` (int):
             x
 
     Text args:
-        ● `text=None` (Optional[str]):
+        - `text=None` (Optional[str]):
             x
-        ● `text_color=(255, 255, 255)` (Optional[Tuple[int, int, int]]):
+        - `text_color=(255, 255, 255)` (Optional[Tuple[int, int, int]]):
             x
-        ● `text_position=(0, -200)` (Tuple[int, int]):
+        - `text_position=(0, -200)` (Tuple[int, int]):
             x
-        ● `font='Arial` (str):
+        - `font='Arial` (str):
             x
-        ● `font_size=16` (int):
+        - `font_size=16` (int):
             x
-        ● `font_type='normal'` (str):
+        - `font_type='normal'` (str):
             x
-        ● `align='center'` (str):
+        - `align='center'` (str):
             x
 
     Png and gif frame args:
-        ● `png=None` (Optional[str]):
+        - `png=None` (Optional[str]):
             x
-        ● `padding=10` (Optional[int]):
+        - `padding=10` (Optional[int]):
             x
-        ● `transparent=False` (bool):
+        - `transparent=False` (bool):
             x
-        ● `antialiasing=4` (int):
+        - `antialiasing=4` (int):
             x
-        ● `output_scale=1` (float):
+        - `output_scale=1` (float):
             x
 
     Gif args:
-        ● `gif=None` (Optional[str]):
+        - `gif=None` (Optional[str]):
             x
-        ● `frame_every=1` (int | Collection[str]):
+        - `frame_every=1` (int | Collection[str]):
             x
-        ● `max_frames=100` (int):
+        - `max_frames=100` (int):
             x
-        ● `duration=20` (int):
+        - `duration=20` (int):
             x
-        ● `pause=500` (int):
+        - `pause=500` (int):
             x
-        ● `defer=0` (int):
+        - `defer=0` (int):
             x
-        ● `loops=None` (Optional[int]):
+        - `loops=None` (Optional[int]):
             x
-        ● `growth=False` (bool):
+        - `growth=False` (bool):
             x
-        ● `reverse=False` (bool):
+        - `reverse=False` (bool):
             x
-        ● `alternate=False` (bool):
+        - `alternate=False` (bool):
             x
-        ● `optimize=True` (bool):
+        - `optimize=True` (bool):
             x
 
     Advanced args:
-        ● `tmpdir=None` (Optional[str]):
+        - `tmpdir=None` (Optional[str]):
             x
-        ● `skip_init=False` (bool):
+        - `skip_init=False` (bool):
             x
-        ● `callback=None` (Optional[Callable[[str, turtle.Turtle], Optional[bool]]]):
+        - `callback=None` (Optional[Callable[[str, turtle.Turtle], Optional[bool]]]):
             x
     ---
-    Returns tuple of the final L-system string and the turtle graphics Turtle object used to draw the pattern.
+    Returns 2-tuple of the final L-system string and the turtle graphics Turtle object used to draw the pattern.
     (Tuple[str, Optional[turtle.Turtle]])
     """
     global _DRAW_NUMBER, _GHOSTSCRIPT
@@ -505,9 +506,9 @@ def wait(exit_on_click: bool = True, *, skip_init: bool = False) -> None:
     If used it should only be called once and be placed after all calls to `draw`.
 
     Args:
-        ● `exit_on_click=True` (bool):
+        - `exit_on_click=True` (bool):
             Whether the window can be closed by clicking anywhere.
-        ● `skip_init=False` (bool):
+        - `skip_init=False` (bool):
             For advanced use. Whether to skip calling `init` when it hasn't been called already.
 
     Returns nothing.
@@ -521,7 +522,7 @@ def wait(exit_on_click: bool = True, *, skip_init: bool = False) -> None:
 
 
 def lsystem(start: str, rules: Union[Dict[str, str], str], level: int) -> str:
-    """Expands the L-system string `start` according to `rules` `level` number of times, returning the result.
+    """Expands the L-system string `start` according to `rules` `level` number of times, returning the resulting string.
 
     When the L-system is run, every non-whitespace printable ASCII character has meaning. TODO
     ```
@@ -961,11 +962,10 @@ def run(  # pylint: disable=too-many-branches,too-many-statements
 
 if __name__ == '__main__':
     try:
-        # draw('>>>>>@<<<<<D@D@DF', 'F FG G G+F', 3, length=20, asap=True, gif='neat', frame_every=20, show_turtle=True,
-        #      turtle_shape='turtle', color=(0, 0, 200), fill_color=None, background_color=(23, 0, 0),
-        #      thickness=10)
-        # draw(frame_every='^', gif='outint', png='foo')
-        draw()
+        init((600, 800))
+        ss, tt = draw()
+        tt.clear()
+        draw(background_color=(255, 255, 255))
         wait()
     except (turtle.Terminator, TclError):
         pass
