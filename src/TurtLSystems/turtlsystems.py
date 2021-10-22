@@ -96,7 +96,7 @@ def init(
         - `window_title="TurtLSystems"` (str):
             The title of the window.
         - `background_color=(0, 0, 0)` (Tuple[int, int, int]):
-            The background color of the window as a 0-255 rgb tuple. May be changed later by draw calls.
+            The background color of the window. A 0-255 rgb tuple. May be changed later by draw calls.
         - `background_image=None` (str | None):
             The file path to a background image for the window.
         - `window_position=None` (Tuple[int | None, int | None] | None):
@@ -208,7 +208,7 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
     tmpdir: Optional[str] = None,
     skip_init: bool = False,
     callback: Optional[Callable[[str, turtle.Turtle], Optional[bool]]] = None,
-) -> Tuple[str, Optional[turtle.Turtle]]:
+) -> Tuple[str, turtle.Turtle]:
     """Opens a turtle graphics window and draws an L-system pattern based on the arguments provided.
     When called multiple times all patterns are drawn to the same canvas.
 
@@ -220,6 +220,8 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
 
     Call `draw()` by itself to see an example Sierpinski triangle pattern.
 
+    In the descriptions below, "on X" is short for "when the character X is encountered in the L-system string".
+
     Positional args:
         - `start='F+G+G'` (str):
             The initial string or axiom of the L-system. Level 0.
@@ -230,18 +232,18 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
         - `level=4` (int):
             The number of L-system expansion steps to take, i.e. how many times to apply `rules` to `start`.
         - `angle=120` (float):
-            The angle to turn by on `+` or `-`. Defaults to degrees but can be changed with `circle`.
+            The angle to turn by on `+` or `-`. In degrees by default but the `circle` arg can be used to change that.
         - `length=20` (float):
             The distance in pixels to move forward by on letters.
         - `thickness=1` (float):
-            Line width in pixels.
+            The line width in pixels. May be any non-negative number.
         - `color=(255, 255, 255)` (Optional[Tuple[int, int, int]]):
-            Line color. 0-255 rgb tuple or None to hide all lines. Selected on `0`.
+            The line color. A 0-255 rgb tuple or None to hide all lines. Reselected on `0`.
         - `fill_color=(128, 128, 128)` (Optional[Tuple[int, int, int]]):
-            Fill color for `{...}` polygons `@` dots and turtle shapes.
-            0-255 rgb tuple or None to hide all fills. Selected on `1`.
+            The fill color for `{}` polygons `@` dots and turtle shapes. A 0-255 rgb tuple or None to hide all fills.
+            Reselected on `1`.
         - `background_color=None` (Optional[Tuple[int, int, int]]):
-            0-255 rgb tuple for window background color or unchanged if None.
+            The background color of the window. A 0-255 rgb tuple or None to leave unchanged.
         - `asap=False` (bool):
             When True the draw will happen as fast as possible.
 
@@ -347,14 +349,14 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
         - `callback=None` (Optional[Callable[[str, turtle.Turtle], Optional[bool]]]):
             x
     ---
-    Returns 2-tuple of the final L-system string and the turtle graphics Turtle object used to draw the pattern.
-    (Tuple[str, Optional[turtle.Turtle]])
+    Returns a 2-tuple of the final L-system string and the turtle graphics Turtle object used to draw the pattern.
+    (Tuple[str, turtle.Turtle])
     """
     global _DRAW_NUMBER, _GHOSTSCRIPT
     _DRAW_NUMBER += 1
     if _WAITED:
         message('Did not draw() because wait() was already called.')
-        return '', None
+        return '', turtle.Turtle()  # Return a couple dummy values so the function signature can stay the same.
     if not skip_init and not _INITIALIZED:
         init()
 
@@ -963,9 +965,8 @@ def run(  # pylint: disable=too-many-branches,too-many-statements
 if __name__ == '__main__':
     try:
         init((600, 800))
-        ss, tt = draw()
-        tt.clear()
-        draw(background_color=(255, 255, 255))
+        draw(png='1')
+        draw(thickness=1.5, png='2')
         wait()
     except (turtle.Terminator, TclError):
         pass
