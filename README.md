@@ -45,7 +45,7 @@ and only the `draw` function is strictly necessary.
 A typical program might look like:
 
 ```py
-from turtlsystems import *
+from TurtLSystems import *
 init(...)  # fill in args
 draw(...)  # fill in args
 wait()
@@ -54,7 +54,7 @@ wait()
 The code that generated [the blue gif][example] of the [Sierpinski arrowhead curve][arrowhead] above is simply:
 
 ```py
-from turtlsystems import *
+from TurtLSystems import *
 draw('+A', 'A B-A-B B A+B+A,', 5, 60, 7, 2, (200, 220, 255), None, (36, 8, 107),
      red_increment=2, gif='example.gif', max_frames=250, duration=30)
 ```

@@ -1,6 +1,6 @@
 """TurtLSystems examples (https://pypi.org/project/turtlsystems)."""
 
-from turtlsystems import draw
+from TurtLSystems import draw
 draw('+A', 'A B-A-B B A+B+A,', 5, 60, 7, 2, (200, 220, 255), None, (36, 8, 107),
      red_increment=2, gif='example.gif', max_frames=250, duration=30)
 # try:
