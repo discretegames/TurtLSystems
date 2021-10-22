@@ -40,9 +40,14 @@ def clean(part):
 table = """| Name | Default | Type | Description |
 | ---- | ------- | ---- | ----------- |
 """
+table = """
+| Name<br>Default<br>Type | Description |
+| ----------------------- | ----------- |
+"""
 args = [tuple(map(clean, arg)) for arg in re.findall(pattern, args, re.DOTALL | re.MULTILINE)]
 for name, default, type_, desc in args:
-    table += f'| `{name}` | `{default}` | `{type_}` | {desc}\n'
+    # table += f'| `{name}` | `{default}` | `{type_}` | {desc}\n'
+    table += f'| `{name}`<br>`{default}`<br>`{type_}` | {desc}\n'
 
 print(table)
 pyperclip.copy(table)
