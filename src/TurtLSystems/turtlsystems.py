@@ -200,13 +200,13 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
     pause: int = 500,
     defer: int = 0,
     loops: Optional[int] = None,
-    growth: bool = False,
     reverse: bool = False,
     alternate: bool = False,
+    growth: bool = False,
     # Advanced args:
     tmpdir: Optional[str] = None,
-    skip_init: bool = False,
     callback: Optional[Callable[[str, turtle.Turtle], Optional[bool]]] = None,
+    skip_init: bool = False,
 ) -> Tuple[str, turtle.Turtle]:
     """Opens a turtle graphics window and draws an L-system pattern based on the arguments provided.
     When called multiple times all patterns are drawn to the same canvas.
@@ -314,45 +314,59 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
 
     Png and gif frame args:
         - `png=None` (str | None):
-            x
+            The file path of where to save the final drawing as a png image, or None for no png output.
+            A file extension is not required.
         - `padding=10` (int | None):
-            x
+            The amount of padding in pixels to frame the drawing with on all sides in png and gif output.
+            Negative values are valid. When None, no padding happens and the entire canvas area is saved.
+            Note that padding very large blank areas can be slow.
         - `transparent=False` (bool):
-            x
+            When True, the background of png and gif output is transparent rather that the window background color.
         - `antialiasing=4` (int):
-            x
+            An integer 1, 2, or 4 that specifies how jagged pixel edges will be in png and gif output.
+            1 for the most jagged, 4 for the least jagged. Note that the window canvas does not respect this option.
         - `output_scale=1` (float):
-            x
+            A factor to scale png and gif dimensions by. Vector graphics are used so there is no quality loss from
+            scaling up, except padding may take longer.
 
     Gif args:
         - `gif=None` (str | None):
-            x
+            The file path of where to save the drawing as a gif animation, or None for no gif output.
+            A file extension is not required.
         - `frame_every=1` (int | Collection[str]):
-            x
-        - `max_frames=100` (int):
-            x
+            When an integer, this is the number of "draw" operations to wait for between recording of gif frames.
+            A "draw" operation is something that draws to the canvas, namely lines from uppercase letters,
+            dots from `@`, and finished polygons from `}`. When a collection such as a string, frames are recorded
+            whenever L-system characters in the collections are encountered.
+        - `max_frames=100` (int | None):
+            The maximum number of frames of the gif or None for no limit.
+            Useful to prevent accidental creation of very long gifs.
         - `duration=20` (int):
-            x
+            The duration in milliseconds of each gif frame. Should be 20 or above and divisible by 10.
         - `pause=500` (int):
-            x
+            The amount of additional time in milliseconds to pause on the last frame of the gif.
         - `defer=0` (int):
-            x
+            The amount of additional time in milliseconds to add to the first frame of the gif.
         - `loops=None` (int | None):
-            x
-        - `growth=False` (bool):
-            x
+            The number of times the gif loops or 0 or None for no limit.
         - `reverse=False` (bool):
-            x
+            Whether to reverse the frames of the gif.
         - `alternate=False` (bool):
-            x
+            When True, the central gif frames are copied and appended in reverse to the end of the gif, making
+            it cycle forwards and backwards. For example, a sequence 01234 would become 01234321.
+        - `growth=False` (bool):
+            When True, the gif consist of frames made from the final patterns of every expansion of the `start` string,
+            from level 0 to `level` inclusive. `frame_every` and `max_frames` are ignored in this mode.
 
     Advanced args:
         - `tmpdir=None` (str | None):
-            x
-        - `skip_init=False` (bool):
-            x
+            The path to a directory to put all .eps and .png files in during the generation of png and gif output.
+            Useful if you need the gif frames as pngs. When None these files are put in a temporary place and deleted.
         - `callback=None` (Callable[[str, turtle.Turtle], bool | None] | None):
-            x
+            When not None, a function that is called for every character in the L-system string the turtle encounters.
+            Two arguments are given, the current character and the Turtle object. If True is returned the turtle stops.
+        - `skip_init=False` (bool):
+            Whether to skip calling `init` when it hasn't been called already.
     ---
     Returns a 2-tuple of the final L-system string and the turtle graphics Turtle object used to draw the pattern.
     (Tuple[str, turtle.Turtle])
@@ -758,7 +772,7 @@ def save_gif(
     defer: int,
     loops: Optional[int],
     reverse: bool,
-    alternate: bool
+    alternate: bool,
 ) -> str:
     """Saves gif from pre-generated png files. Returns path to gif."""
     images = [Image.open(png).convert('RGBA') for png in pngs]
@@ -970,8 +984,9 @@ def run(  # pylint: disable=too-many-branches,too-many-statements
 if __name__ == '__main__':
     try:
         # init(delay=1000)
-        draw('+FFFFFFFFFF', '', turtle_shape='classic', show_turtle=True,
-             text='test', font_size=-90, font_style='bold')
+        draw('FFFFFFFFFF', '', turtle_shape='classic', show_turtle=True, padding=10,
+             text='test', font_size=90, font_style='bold', antialiasing=4, gif='hmm',
+             alternate=True, pause=0, duration=50, reverse=True)
         # draw('+FFFFFFFFFF', '', turtle_shape='classic', show_turtle=True, text='hmm II', font_size=90)
         wait()
     except (turtle.Terminator, TclError):
