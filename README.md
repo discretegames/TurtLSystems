@@ -1,7 +1,9 @@
 <!-- markdownlint-disable MD033 -->
 # **[TurtLSystems][pypi]**
 
-*In development. Project is not fully tested.*
+[Intro][intro] | [Installation][install] | [Usage][usage] | [Instructions][inst]
+
+*This project is in development and not fully tested.*
 
 [TurtLSystems][pypi] is a Python 3 package for drawing [L-systems][wiki] via [turtle graphics][turtle]
 with easy ways to output png images and gif animations of the patterns generated.
@@ -88,8 +90,8 @@ When called multiple times all patterns are drawn to the same canvas.
 All 54 arguments are optional but `start` and `rules` are the most important because they define the L-system,
 and `level` defines how many expansion steps take place. On an expansion step, every character in `start` is
 replaced with what it maps to in `rules` (or left unchanged if not present) resulting in a new `start` string.
-The characters of `start` after the last expansion are the instructions the turtle follows to draw a pattern.
-See the `lsystem` function documentation for specifics on what each character does as an instruction.
+The characters of `start` after the last expansion are the [instructions][inst] the turtle follows to draw a pattern.
+See the [`lsystem`][lsystem] function documentation for specifics on what each character does as an instruction.
 
 Call `draw()` by itself to see an example Sierpinski triangle pattern.
 
@@ -283,6 +285,10 @@ Many of the instructions are based on [Paul Bourke's 1991 *L-System User Notes*]
 [draw]: https://github.com/discretegames/turtlsystems#draw-function
 [wait]: https://github.com/discretegames/turtlsystems#wait-function
 [lsystem]: https://github.com/discretegames/turtlsystems#lsystem-function
+[intro]: https://github.com/discretegames/turtlsystems#turtlsystems
+[install]: https://github.com/discretegames/turtlsystems#installation-supports-python-36
+[usage]: https://github.com/discretegames/turtlsystems#usage
+[inst]: https://github.com/discretegames/turtlsystems#instructions
 [arrowhead]: https://en.wikipedia.org/wiki/Sierpi%C5%84ski_curve#Arrowhead_curve
 [py]: https://www.python.org/downloads/
 [paul]: http://paulbourke.net/fractals/lsys
