@@ -27,6 +27,7 @@
 		"NOPAUSE",
 		"penup",
 		"pngalpha",
+		"tmpdir",
 		"turtlsystems",
 		"winfo",
 		"xcor",

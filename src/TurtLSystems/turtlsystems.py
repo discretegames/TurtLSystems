@@ -216,7 +216,7 @@ def draw(
     """Opens a turtle graphics window and draws an L-system pattern based on the arguments provided.
     When called multiple times all patterns are drawn to the same canvas.
 
-    All arguments are optional but `start` and `rules` are the most important because they define the L-system,
+    All 54 arguments are optional but `start` and `rules` are the most important because they define the L-system,
     and `level` defines how many expansion steps take place. On an expansion step, every character in `start` is
     replaced with what it maps to in `rules` (or left unchanged if not present) resulting in a new `start` string.
     The characters of `start` after the last expansion are the instructions the turtle follows to draw a pattern.
@@ -347,7 +347,7 @@ def draw(
             1 for the most jagged, 4 for the least jagged. Note that the window canvas does not respect this option.
         - `output_scale=1` (float):
             A factor to scale png and gif dimensions by. Vector graphics are used so there is no quality loss from
-            scaling up, except padding may take longer.
+            scaling up, though padding may take longer.
 
     Gif args:
         - `gif=None` (str | None):
@@ -611,7 +611,7 @@ def lsystem(start: str, rules: Union[Dict[str, str], str], level: int) -> str:
     #       The next 0123456789.,:;!? apply to fill color rather than line color.
     \\       Stop executing all instructions immediately.
     ```
-    All characters not mentioned are ignored and have no effect.
+    Any characters not mentioned are ignored and have no effect.
     Many of the instructions are based on Paul Bourke's 1991 "L-System User Notes": http://paulbourke.net/fractals/lsys
 
     ---
