@@ -81,7 +81,7 @@ def init(
     window_position: Optional[Tuple[Optional[int], Optional[int]]] = None,
     canvas_size: Optional[Tuple[Optional[int], Optional[int]]] = None,
     ghostscript: Optional[str] = None,
-    mode: str = 'standard',
+    logo_mode: bool = False,
     delay: Optional[int] = None,
     silent: bool = False
 ) -> None:
@@ -107,8 +107,10 @@ def init(
             When None, an educated guess of the path is made on Windows and 'gs' is used on Mac/Linux.
             Ghostscript is the image conversion tool required for png and gif output:
             https://ghostscript.com/releases/gsdnld.html
-        - `mode='standard'` (str):
-            The turtle graphics coordinates mode. Either 'standard' or 'logo'.
+        - `logo_mode=False` (bool):
+            Whether the turtle graphics coordinates mode is 'standard' or 'logo'. Defaults to standard.
+            In standard mode an angle of 0 points rightward and positive angles go counterclockwise.
+            In logo mode an angle of 0 points upward and positive angles go clockwise.
         - `delay=None` (int | None):
             The turtle graphics animation delay in milliseconds. None for default value.
         - `silent=False` (bool):
@@ -123,7 +125,7 @@ def init(
         return
     _GHOSTSCRIPT = ghostscript or ''
     turtle.title(window_title)
-    turtle.mode(mode)
+    turtle.mode('logo' if logo_mode else 'standard')
     if delay is not None:
         turtle.delay(delay)
     turtle.colormode(255)
@@ -142,8 +144,8 @@ def init(
     _INITIALIZED = True
 
 
-# Horrendously long function, I know, but can't be bothered to refactor.
-def draw(  # pylint: disable=too-many-branches,too-many-statements
+# Horrendously long function, I know, but I can't be bothered to refactor.
+def draw(
     # Positional args:
     start: str = 'F+G+G',
     rules: Union[Dict[str, str], str] = 'F F+G-F-G+F G GG',
@@ -231,9 +233,9 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
         - `level=4` (int):
             The number of L-system expansion steps to take, i.e. how many times to apply `rules` to `start`.
         - `angle=120` (float):
-            The angle to turn by on `+` or `-`. In degrees by default but the `circle` arg can be used to change that.
+            The angle to turn by on `+` or `-`. In degrees by default but the `circle` arg can change that.
         - `length=20` (float):
-            The distance in pixels to move forward by on letters.
+            The distance in pixels to move forward by on letters. The length step.
         - `thickness=1` (float):
             The line width in pixels. May be any non-negative number.
         - `color=(255, 255, 255)` (Tuple[int, int, int] | None):
@@ -248,7 +250,22 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
 
     Customization args:
         - `colors=None` (Iterable[Tuple[int, int, int] | None] | None):
-            x
+            When an iterable such as a list, `color` and `fill_color` are ignored and the first 10 colors of the list
+            become the colors that are selected on `0` through `9`. Each may be a 0-255 rgb tuple or None for no color.
+            The following list of defaults is used to fill out anything missing if less than 10 colors are given:
+
+            - 0 = (255, 255, 255) white
+            - 1 = (128, 128, 128) gray
+            - 2 = (255, 0, 0) red
+            - 3 = (255, 128, 0) orange
+            - 4 = (255, 255, 0) yellow
+            - 5 = (0, 255, 0) green
+            - 6 = (0, 255, 255) cyan
+            - 7 = (0, 0, 255) blue
+            - 8 = (128, 0, 255) purple
+            - 9 = (255, 0, 255) magenta
+
+            When `colors` is None, `color` and `fill_color` are used replace slots 0 and 1 respectively.
         - `position=(0, 0)` (Tuple[float, float]):
             The initial (x, y) position of the turtle.
         - `heading=0` (float):
@@ -281,13 +298,13 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
 
     Increment args:
         - `angle_increment=15` (float):
-            The amount to increment or decrement the turning angle by on `)` or `(`.
+            The amount to increment or decrement `angle` by on `)` or `(`.
         - `length_increment=5` (float):
-            The amount to increment or decrement the length step by on `^` or `%`.
+            The amount to increment or decrement `length` by on `^` or `%`.
         - `length_scalar=2` (float):
-            The amount to multiply or divide the length step by on `*` or `/`.
+            The amount to multiply or divide `length` by on `*` or `/`.
         - `thickness_increment=1` (float):
-            The amount to increment or decrement the line thickness by on `>` or `<`.
+            The amount to increment or decrement the `thickness` by on `>` or `<`. Won't go below 0.
         - `red_increment=1` (int):
             The amount to increment or decrement the red channel of the line or fill color by on `,` or `.`.
         - `green_increment=1` (int):
@@ -483,7 +500,7 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
                               heading=heading,
                               angle=angle,
                               length=scale*length,
-                              thickness=abs(scale) * thickness,
+                              thickness=abs(scale) * max(0, thickness),
                               angle_increment=angle_increment,
                               length_increment=scale*length_increment,
                               length_scalar=length_scalar,
@@ -545,10 +562,47 @@ def wait(exit_on_click: bool = True, *, skip_init: bool = False) -> None:
 def lsystem(start: str, rules: Union[Dict[str, str], str], level: int) -> str:
     """Expands the L-system string `start` according to `rules` `level` number of times, returning the resulting string.
 
-    When the L-system is run, every non-whitespace printable ASCII character has meaning. TODO
+    The `draw` function calls this internally. You do you not need to call it unless you want to.
+
+    Every non-whitespace printable ASCII character in an L-system string is an instruction as follows:
+    ```plaintext
+    A-Z     Move forward by length step, drawing a line.
+    a-z     Move forward by length step, not drawing a line.
+    +       Turn positively by turning angle.
+    -       Turn negatively by turning angle.
+    |       Make a half turn (turn by 180°).
+    &       Swap meaning of + and -.
+    `       Swap meaning of uppercase and lowercase.
+    @       Draw a fill color dot with radius max(2*thickness, 4+thickness).
+    {       Start a polygon.
+    }       Finish a polygon, filling it with fill color.
+    [       Push current turtle state onto the stack (position, heading, colors, etc).
+    ]       Pop current turtle state off the stack, if not empty.
+    $       Clear stack.
+    )       Increment turning angle by angle_increment.
+    (       Decrement turning angle by angle_increment.
+    ~       Reset turning angle back to its initial value.
+    *       Multiply length step by length_scalar.
+    /       Divide length step by length_scalar.
+    ^       Increment length step by length_increment.
+    %       Decrement length step by length_increment.
+    _       Reset length step back to its initial value.
+    >       Increment line thickness by thickness_increment.
+    <       Decrement line thickness by thickness_increment. Won't go below 0.
+    =       Reset line thickness back to its initial value.
+    '       Reset heading back to its initial value.
+    "       Reset position back to its initial value.
+    0-9     Change color to the color at this index of colors list.
+    ,       Increment current color's 0-255 red channel by red_increment.
+    .       Decrement current color's 0-255 red channel by red_increment.
+    ;       Increment current color's 0-255 green channel by green_increment.
+    ;       Decrement current color's 0-255 green channel by green_increment.
+    ?       Increment  current color's 0-255 blue channel by blue_increment.
+    !       Decrement  current color's 0-255 blue channel by blue_increment.
+    #       The next 0123456789.,:;!? apply to fill color rather than line color.
+    \\       Stop executing all instructions immediately.
     ```
-    TODO
-    ```
+    All characters not mentioned are ignored and have no effect.
     """
     if isinstance(rules, str):
         rules = make_rules(rules)
@@ -788,7 +842,7 @@ def save_gif(
     return gif
 
 
-def run(  # pylint: disable=too-many-branches,too-many-statements
+def run(
     *,
     t: turtle.Turtle,
     string: str,
@@ -896,9 +950,9 @@ def run(  # pylint: disable=too-many-branches,too-many-statements
             length /= length_scalar
         # Angle:
         elif c == '+':
-            (t.right if swap_signs else t.left)(angle)
+            t.seth(t.heading() + (-1 if swap_signs else 1) * angle)
         elif c == '-':
-            (t.left if swap_signs else t.right)(angle)
+            t.seth(t.heading() - (-1 if swap_signs else 1) * angle)
         elif c == '&':
             swap_signs = not swap_signs
         elif c == '|':
@@ -914,10 +968,10 @@ def run(  # pylint: disable=too-many-branches,too-many-statements
             thickness = initial_thickness
             set_pensize()
         elif c == '>':
-            thickness += thickness_increment
+            thickness = max(0, thickness + thickness_increment)
             set_pensize()
         elif c == '<':
-            thickness -= thickness_increment
+            thickness = max(0, thickness - thickness_increment)
             set_pensize()
         # Color:
         elif '0' <= c <= '9':
@@ -983,11 +1037,7 @@ def run(  # pylint: disable=too-many-branches,too-many-statements
 
 if __name__ == '__main__':
     try:
-        # init(delay=1000)
-        draw('FFFFFFFFFF', '', turtle_shape='classic', show_turtle=True, padding=10,
-             text='test', font_size=90, font_style='bold', antialiasing=4, gif='hmm',
-             alternate=True, pause=0, duration=50, reverse=True)
-        # draw('+FFFFFFFFFF', '', turtle_shape='classic', show_turtle=True, text='hmm II', font_size=90)
+        draw()
         wait()
     except (turtle.Terminator, TclError):
         pass

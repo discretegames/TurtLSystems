@@ -41,7 +41,7 @@
 	"python.linting.pylintArgs": [
 		"--ignored-modules=turtle,tkinter",
 		"--max-line-length=120",
-		"--disable=invalid-name,too-many-arguments,too-many-locals,global-statement"
+		"--disable=invalid-name,too-many-arguments,too-many-locals,global-statement,too-many-lines,too-many-branches,too-many-statements"
 	],
 	"python.linting.flake8Enabled": true,
 	"python.linting.flake8Args": [
