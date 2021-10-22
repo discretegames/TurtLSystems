@@ -182,10 +182,10 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
     text: Optional[str] = None,
     text_color: Optional[Tuple[int, int, int]] = (255, 255, 255),
     text_position: Tuple[int, int] = (0, -200),
+    text_align: str = 'center',
     font: str = 'Arial',
     font_size: int = 16,
-    font_type: str = 'normal',
-    align: str = 'center',
+    font_style: str = 'normal',
     # Png and gif frame args:
     png: Optional[str] = None,
     padding: Optional[int] = 10,
@@ -244,7 +244,7 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
         - `background_color=None` (Tuple[int, int, int] | None):
             The background color of the window. A 0-255 rgb tuple or None to leave unchanged.
         - `asap=False` (bool):
-            When True the draw will happen as fast as possible.
+            When True the draw will happen as fast as possible, ignoring `speed` arg and the `delay` arg of `init`.
 
     Customization args:
         - `colors=None` (Iterable[Tuple[int, int, int] | None] | None):
@@ -264,48 +264,53 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
         - `max_chars=None` (int | None):
             The maximum number of characters in the final L-system string (`prefix` + expanded `start` + `suffix`)
             to follow the instructions for, or None for no limit.
+        - `max_draws=None` (int | None):
+            The maximum number of "draw" operations to do or None for no limit. A "draw" operation is something that
+            draws to the canvas, namely lines from uppercase letters, dots from `@`, and finished polygons from `}`.
 
     Turtle args:
         - `speed='fastest'` (int | str):
-            x
+            The speed of the turtle. An integer from 1 to 10 for slowest to fastest or 0 for the fastest possible.
+            Strings 'slowest', 'slow', 'normal', 'fast', and 'fastest' correspond to 1, 3, 6, 10, and 0 respectively.
         - `show_turtle=False` (bool):
-            x
+            Whether the turtle is shown or not.
         - `turtle_shape='classic'` (str):
-            x
+            The shape of the turtle. Can be 'classic', 'arrow', 'turtle', 'circle', 'square', or 'triangle'.
         - `circle=360` (float):
-            x
+            The number of degrees to consider a full circle as having. Use `2*math.pi` to work in radians.
 
     Increment args:
         - `angle_increment=15` (float):
-            x
+            The amount to increment or decrement the turning angle by on `)` or `(`.
         - `length_increment=5` (float):
-            x
+            The amount to increment or decrement the length step by on `^` or `%`.
         - `length_scalar=2` (float):
-            x
+            The amount to multiply or divide the length step by on `*` or `/`.
         - `thickness_increment=1` (float):
-            x
+            The amount to increment or decrement the line thickness by on `>` or `<`.
         - `red_increment=1` (int):
-            x
+            The amount to increment or decrement the red channel of the line or fill color by on `,` or `.`.
         - `green_increment=1` (int):
-            x
+            The amount to increment or decrement the green channel of the line or fill color by on `;` or `:`.
         - `blue_increment=1` (int):
-            x
+            The amount to increment or decrement the blue channel of the line or fill color by on `?` or `!`.
 
     Text args:
         - `text=None` (str | None):
-            x
+            A string of text to add to the canvas. Patters are drawn on top of it. None for no text.
         - `text_color=(255, 255, 255)` (Tuple[int, int, int] | None):
-            x
+            The color of the text. A 0-255 rgb tuple or None to hide the text.
         - `text_position=(0, -200)` (Tuple[int, int]):
-            x
+            The (x, y) position of the text.
+        - `text_align='center'` (str):
+            The alignment of the text. Either 'left', 'center', or 'right'.
         - `font='Arial` (str):
-            x
+            The font name of the text.
         - `font_size=16` (int):
-            x
-        - `font_type='normal'` (str):
-            x
-        - `align='center'` (str):
-            x
+            The font size of the text. Measured in points if positive or in pixels if negative.
+        - `font_style='normal'` (str):
+            The styling to apply to the font of the text. 'normal', 'bold', 'italic', 'underline' and 'overstrike'
+            are all possibilities and can be combined like 'bold italic'.
 
     Png and gif frame args:
         - `png=None` (str | None):
@@ -389,7 +394,7 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
                     thickness_increment=thickness_increment, red_increment=red_increment,
                     green_increment=green_increment, blue_increment=blue_increment, text=text,
                     text_color=text_color, text_position=text_position, font=font, font_size=font_size,
-                    font_type=font_type, align=align, transparent=transparent, antialiasing=antialiasing
+                    font_style=font_style, text_align=text_align, transparent=transparent, antialiasing=antialiasing
                 )
                 if lvl != level:
                     lvl_t.clear()
@@ -434,7 +439,7 @@ def draw(  # pylint: disable=too-many-branches,too-many-statements
         orient(t, text_position)
         t.pencolor(text_color)
         try:
-            t.write(text, False, align, (font, font_size, font_type))
+            t.write(text, False, text_align, (font, font_size, font_style))
         except Exception as e:  # pylint: disable=broad-except
             message('Unable to add text:', e)
     t.pencolor(true_background_color)  # Ensure initial colors are tuples.
@@ -964,8 +969,10 @@ def run(  # pylint: disable=too-many-branches,too-many-statements
 
 if __name__ == '__main__':
     try:
-        draw(scale=1, asap=True, position=(100, 10), max_draws=9)
-        draw(scale=-1, asap=True, position=(100, 10))
+        # init(delay=1000)
+        draw('+FFFFFFFFFF', '', turtle_shape='classic', show_turtle=True,
+             text='test', font_size=-90, font_style='bold')
+        # draw('+FFFFFFFFFF', '', turtle_shape='classic', show_turtle=True, text='hmm II', font_size=90)
         wait()
     except (turtle.Terminator, TclError):
         pass
