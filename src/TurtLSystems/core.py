@@ -1050,7 +1050,6 @@ def run(
 
 if __name__ == '__main__':
     try:
-        init()
         draw()
         wait()
     except (turtle.Terminator, tkinter.TclError, KeyboardInterrupt):
