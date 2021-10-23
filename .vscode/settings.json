@@ -11,9 +11,11 @@
 		"htmlcov/": true,
 		".github": true,
 		"venv": false,
-		"LICENSE.txt": true
+		"LICENSE.txt": true,
+		"**/.git": false,
 	},
 	"cSpell.words": [
+		"autopep",
 		"bgpic",
 		"Bourke",
 		"canvheight",
