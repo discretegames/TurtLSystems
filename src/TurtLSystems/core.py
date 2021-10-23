@@ -2,12 +2,12 @@
 
 import os
 import turtle
+import tkinter
 import subprocess
 from pathlib import Path
 from typing import Any, Callable, List, Dict, Tuple, Iterable, Collection, Sequence, Optional, Union, cast
 from tempfile import TemporaryDirectory
 from contextlib import ExitStack
-from tkinter import TclError
 from shutil import copyfile
 from string import digits
 from PIL import Image
@@ -39,8 +39,12 @@ _DRAW_NUMBER = 0
 _INITIALIZED = _WAITED = _SILENT = False
 _GHOSTSCRIPT = ''
 
+# Exit exception:
+Exit = turtle.Terminator, tkinter.TclError
 
 # Dataclasses are not in 3.6 and SimpleNamespace is not typed properly so decided to use a plain class for State.
+
+
 class State:  # pylint: disable=too-many-instance-attributes,too-few-public-methods
     """L-system state."""
 
@@ -121,6 +125,7 @@ def init(
     ---
     Documentation available on a single page at https://github.com/discretegames/TurtLSystems#init
     """
+    window_size = fix_ellipsis(window_size, (0.75, 0.75))
     global _SILENT, _GHOSTSCRIPT, _INITIALIZED
     _SILENT = silent
     if _WAITED:
@@ -394,6 +399,7 @@ def draw(
     ---
     Documentation available on a single page at https://github.com/discretegames/TurtLSystems#draw
     """
+    start = fix_ellipsis(start, 'F+G+G')
     global _DRAW_NUMBER, _GHOSTSCRIPT
     _DRAW_NUMBER += 1
     if _WAITED:
@@ -1048,9 +1054,14 @@ def run(
     return eps_paths, size
 
 
+def fix_ellipsis(value: Any, default: Any) -> Any:
+    """Helps fix accidental use of init(...) or draw(...)."""
+    return default if isinstance(value, type(Ellipsis)) else value
+
+
 if __name__ == '__main__':
     try:
         draw()
         wait()
-    except (turtle.Terminator, tkinter.TclError, KeyboardInterrupt):
+    except Exit:
         pass

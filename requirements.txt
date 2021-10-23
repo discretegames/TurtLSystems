@@ -1,4 +1,6 @@
+# also pip install -e .
 astroid==2.8.2
+autopep8==1.5.7
 colorama==0.4.4
 flake8==4.0.1
 isort==5.9.3
