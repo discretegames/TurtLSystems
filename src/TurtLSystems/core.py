@@ -1,4 +1,4 @@
-"""Core source code file of turtlsystems Python package (https://pypi.org/project/turtlsystems)."""
+"""Core source code file of TurtLSystems Python package (https://pypi.org/project/TurtLSystems)."""
 
 import os
 import turtle
@@ -119,7 +119,7 @@ def init(
     Returns nothing.
 
     ---
-    Documentation available on a single page at https://github.com/discretegames/turtlsystems#init
+    Documentation available on a single page at https://github.com/discretegames/TurtLSystems#init
     """
     global _SILENT, _GHOSTSCRIPT, _INITIALIZED
     _SILENT = silent
@@ -392,7 +392,7 @@ def draw(
     (Tuple[str, turtle.Turtle])
 
     ---
-    Documentation available on a single page at https://github.com/discretegames/turtlsystems#draw
+    Documentation available on a single page at https://github.com/discretegames/TurtLSystems#draw
     """
     global _DRAW_NUMBER, _GHOSTSCRIPT
     _DRAW_NUMBER += 1
@@ -558,7 +558,7 @@ def wait(exit_on_click: bool = True, *, skip_init: bool = False) -> None:
     Returns nothing.
 
     ---
-    Documentation available on a single page at https://github.com/discretegames/turtlsystems#wait
+    Documentation available on a single page at https://github.com/discretegames/TurtLSystems#wait
     """
     if not skip_init and not _INITIALIZED:
         init()
@@ -615,7 +615,7 @@ def lsystem(start: str, rules: Union[Dict[str, str], str], level: int) -> str:
     Many of the instructions are based on Paul Bourke's 1991 "L-System User Notes": http://paulbourke.net/fractals/lsys
 
     ---
-    Documentation available on a single page at https://github.com/discretegames/turtlsystems#lsystem
+    Documentation available on a single page at https://github.com/discretegames/TurtLSystems#lsystem
     """
     if isinstance(rules, str):
         rules = make_rules(rules)
