@@ -1,17 +1,27 @@
 """Core source code file of TurtLSystems Python package (https://pypi.org/project/TurtLSystems)."""
-
 import os
-import turtle
-import tkinter
 import subprocess
-from pathlib import Path
-from typing import Any, Callable, List, Dict, Tuple, Iterable, Collection, Sequence, Optional, Union, cast
-from tempfile import TemporaryDirectory
+import tkinter
+import turtle
 from contextlib import ExitStack
+from pathlib import Path
 from shutil import copyfile
 from string import digits
-from PIL import Image
+from tempfile import TemporaryDirectory
+from typing import Any
+from typing import Callable
+from typing import cast
+from typing import Collection
+from typing import Dict
+from typing import Iterable
+from typing import List
+from typing import Optional
+from typing import Sequence
+from typing import Tuple
+from typing import Union
+
 from packaging import version
+from PIL import Image
 
 # Types:
 Color = Tuple[int, int, int]
@@ -706,13 +716,16 @@ def guess_ghostscript() -> str:
     """
     if os.name != 'nt':
         return 'gs'  # I'm not sure where to look on non-Windows OSes so just guess 'gs'.
+
+    def sort_by_version(v: Path) -> Union[version.Version, version.LegacyVersion]:
+        return version.parse(v.name[2:])  # When this is an inline lambda mypy and pylint fuss.
     locations = 'C:\\Program Files\\gs', 'C:\\Program Files (x86)\\gs'
     files = 'gswin64c.exe', 'gswin32c.exe', 'gs.exe'
     for location in locations:
         path = Path(location)
         if path.exists():
             versions = [v for v in path.iterdir() if v.is_dir() and v.name.startswith('gs')]
-            versions.sort(key=lambda v: version.parse(v.name[2:]), reverse=True)
+            versions.sort(key=sort_by_version, reverse=True)
             for v in versions:
                 for file in files:
                     exe = v / 'bin' / file

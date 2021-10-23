@@ -11,7 +11,7 @@ repos:
     rev: v2.6.0
     hooks:
       - id: reorder-python-imports
-        args: [--application-directories=.:src, --py36-plus]
+        args: [--application-directories=., --py36-plus]
 
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v0.910
@@ -20,9 +20,18 @@ repos:
         files: ^src/
         args: [--strict]
 
+  - repo: https://github.com/PyCQA/pylint
+    rev: v2.11.1
+    hooks:
+      - id: pylint
+        language_version: python3
+        args:
+          - --max-line-length=120
+          - --ignored-modules=turtle,tkinter
+          - --disable=invalid-name,too-many-arguments,too-many-locals,global-statement,too-many-lines,too-many-branches,too-many-statements,import-error
+
   - repo: https://github.com/PyCQA/flake8
     rev: 4.0.1
     hooks:
       - id: flake8
         language_version: python3
-# TODO pylint

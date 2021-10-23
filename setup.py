@@ -1,9 +1,10 @@
 """Package setup file for TurtLSystems Python package (https://pypi.org/project/TurtLSystems)."""
-
 from pathlib import Path
-from setuptools import setup, find_packages
 
-VERSION = "0.1.0"
+from setuptools import find_packages
+from setuptools import setup
+
+VERSION = "0.1.1"
 
 if __name__ == '__main__':
     with open(Path(__file__).with_name('README.md'), encoding='utf-8') as file:
