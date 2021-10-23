@@ -1,7 +1,9 @@
 # also pip install -e .
+aspy.refactor-imports==2.2.0
 astroid==2.8.2
 autopep8==1.5.7
 backports.entry-points-selectable==1.1.0
+cached-property==1.5.2
 cfgv==3.3.1
 colorama==0.4.4
 distlib==0.3.3
@@ -24,6 +26,7 @@ pylint==2.11.1
 pyparsing==2.4.7
 pyperclip==1.8.2
 PyYAML==6.0
+reorder-python-imports==2.6.0
 six==1.16.0
 toml==0.10.2
 typing-extensions==3.10.0.2
