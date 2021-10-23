@@ -130,16 +130,16 @@ Returns a 2-tuple of the final L-system string and the turtle graphics Turtle ob
 
 **Default Colors:**
 
-- ![0](https://via.placeholder.com/10/ffffff.png?text=+) `0 = (255, 255, 255)` (white)
-- ![1](https://via.placeholder.com/10/808080.png?text=+) `1 = (128, 128, 128)` (gray)
-- ![2](https://via.placeholder.com/10/ff0000.png?text=+) `2 = (255, 0, 0)` (red)
-- ![3](https://via.placeholder.com/10/ff8000.png?text=+) `3 = (255, 128, 0)` (orange)
-- ![4](https://via.placeholder.com/10/ffff00.png?text=+) `4 = (255, 255, 0)` (yellow)
-- ![5](https://via.placeholder.com/10/00ff00.png?text=+) `5 = (0, 255, 0)` (green)
-- ![6](https://via.placeholder.com/10/00ffff.png?text=+) `6 = (0, 255, 255)` (cyan)
-- ![7](https://via.placeholder.com/10/0000ff.png?text=+) `7 = (0, 0, 255)` (blue)
-- ![8](https://via.placeholder.com/10/8000ff.png?text=+) `8 = (128, 0, 255)` (purple)
-- ![9](https://via.placeholder.com/10/ff00ff.png?text=+) `9 = (255, 0, 255)` (magenta)
+- ![0](https://via.placeholder.com/10/ffffff.png?text=+) `0 = (255, 255, 255)` white
+- ![1](https://via.placeholder.com/10/808080.png?text=+) `1 = (128, 128, 128)` gray
+- ![2](https://via.placeholder.com/10/ff0000.png?text=+) `2 = (255, 0, 0)` red
+- ![3](https://via.placeholder.com/10/ff8000.png?text=+) `3 = (255, 128, 0)` orange
+- ![4](https://via.placeholder.com/10/ffff00.png?text=+) `4 = (255, 255, 0)` yellow
+- ![5](https://via.placeholder.com/10/00ff00.png?text=+) `5 = (0, 255, 0)` green
+- ![6](https://via.placeholder.com/10/00ffff.png?text=+) `6 = (0, 255, 255)` cyan
+- ![7](https://via.placeholder.com/10/0000ff.png?text=+) `7 = (0, 0, 255)` blue
+- ![8](https://via.placeholder.com/10/8000ff.png?text=+) `8 = (128, 0, 255)` purple
+- ![9](https://via.placeholder.com/10/ff00ff.png?text=+) `9 = (255, 0, 255)` magenta
 
 ### Turtle Arguments
 
