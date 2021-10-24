@@ -4,7 +4,7 @@
 <!-- markdownlint-disable MD033 -->
 # **[TurtLSystems][pypi]**
 
-[Intro][intro] | [Installation][install] | [Usage][usage] | [L-System Instructions][inst] | [Links][links]
+[Intro][intro] | [Installation][install] | [Usage][usage] | [L-System Instructions][inst] | [Examples][ex] | [Links][links]
 
 [TurtLSystems][pypi] is a Python 3 package for drawing [L-systems][wiki] via [turtle graphics][turtle]
 with easy ways to output png images and gif animations of the patterns generated.
@@ -297,7 +297,8 @@ Many of the instructions are based on [Paul Bourke's 1991 *L-System User Notes*]
 
 # Examples
 
-Coming soon.
+
+
 
 # Links
 
@@ -315,7 +316,6 @@ Coming soon.
 
 [pypi]: https://pypi.org/project/TurtLSystems/
 [tpypi]: https://test.pypi.org/project/TurtLSystems/
-[example]:  https://raw.githubusercontent.com/discretegames/TurtLSystems/main/example.gif
 [wiki]: https://en.wikipedia.org/wiki/L-system
 [turtle]: https://docs.python.org/3/library/turtle.html
 [gs]: https://ghostscript.com/
@@ -337,3 +337,13 @@ Coming soon.
 [license]: https://github.com/discretegames/TurtLSystems/blob/main/LICENSE.txt
 [pillow]: https://pypi.org/project/Pillow/
 [pillowdoc]: https://pillow.readthedocs.io/en/stable/
+
+[example]: https://raw.githubusercontent.com/discretegames/TurtLSystems/main/examples/example.gif
+[sierpinski]: https://raw.githubusercontent.com/discretegames/TurtLSystems/main/examples/sierpinski.png
+[arrowhead]: https://raw.githubusercontent.com/discretegames/TurtLSystems/main/examples/arrowhead.png
+[koch]: https://raw.githubusercontent.com/discretegames/TurtLSystems/main/examples/koch.png
+[antikoch]: https://raw.githubusercontent.com/discretegames/TurtLSystems/main/examples/antikoch.png
+[squarekoch]: https://raw.githubusercontent.com/discretegames/TurtLSystems/main/examples/squarekoch.png
+[dragon]: https://raw.githubusercontent.com/discretegames/TurtLSystems/main/examples/dragopn.png
+[tree]: https://raw.githubusercontent.com/discretegames/TurtLSystems/main/examples/tree.png
+[plant]: https://raw.githubusercontent.com/discretegames/TurtLSystems/main/examples/plant.png
