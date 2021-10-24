@@ -1,5 +1,6 @@
 <!-- markdownlint-disable-next-line MD041 -->
 [![Python version support](https://img.shields.io/pypi/pyversions/TurtLSystems)](https://www.python.org/downloads/)
+[![Test Coverage](https://raw.githubusercontent.com/discretegames/TurtLSystems/main/coverage.svg)](https://github.com/discretegames/TurtLSystems/blob/main/coverage.txt)
 
 <!-- markdownlint-disable MD033 -->
 # **[TurtLSystems][pypi]**
@@ -292,7 +293,7 @@ _       Reset length step back to its initial value.
 \       Stop executing all instructions immediately.
 ```
 
-Any characters not mentioned are ignored and have no effect.  
+Any characters not mentioned are ignored and have no effect.
 Many of the instructions are based on [Paul Bourke's 1991 *L-System User Notes*][paul].
 
 # Examples
