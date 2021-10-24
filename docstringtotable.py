@@ -1,4 +1,4 @@
-#  type: ignore
+# type: ignore
 """Turns function docstring arguments list into markdown table."""
 
 import re
