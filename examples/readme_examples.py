@@ -22,3 +22,5 @@ draw('A', 'A B-A-B B A+B+A,', 5, 60, 7, 2, (200, 220, 255), None, (36, 8, 107),
 # draw('A', 'A B[-A]+A B BB', 7, 45, 3, color=(255, 128, 0), asap=True, heading=90, png='examples/tree')
 
 # draw('X', 'X F+[[X]-X]-F[-FX]+X F FF', 5, 20, 5, color=(0, 255, 0), asap=True, heading=88, png='examples/plant')
+
+wait()

@@ -15,6 +15,7 @@
 		"**/.git": true,
 	},
 	"cSpell.words": [
+		"antikoch",
 		"autopep",
 		"bgpic",
 		"Bourke",
@@ -29,6 +30,7 @@
 		"NOPAUSE",
 		"penup",
 		"pngalpha",
+		"squarekoch",
 		"tmpdir",
 		"turtlsystems",
 		"winfo",

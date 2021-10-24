@@ -48,7 +48,7 @@ automatically when you install TurtLSystems.
 TurtLSystems has only four functions, [`init`][init], [`draw`][draw], [`wait`][wait], and [`lsystem`][lsystem],
 and only the `draw` function is strictly necessary.
 
-The code that generated [the blue gif][example] of the [Sierpinski arrowhead curve][arrowhead] above is simply:
+The code that generated [the blue gif][example] of the [Sierpinski arrowhead curve][arrowheadwiki] above is simply:
 
 ```py
 from TurtLSystems import *
@@ -87,7 +87,7 @@ Returns nothing.
 
 ### Arguments
 
-| Arg Name<br>`Default Value` | Description<br>`Type` |
+| Name<br>`Default` | Description<br>`Type` |
 | --------------------------- | --------------------- |
 | window_size<br>`(0.75, 0.75)` | The size of the window. Use integers for pixel dimensions. Use floats for a percentage of the screen size.<br>`Tuple[int \| float, int \| float]`
 | window_title<br>`"TurtLSystems"` | The title of the window.<br>`str`
@@ -124,7 +124,7 @@ Returns a 2-tuple of the final L-system string and the turtle graphics Turtle ob
 
 ### Positional Arguments
 
-| Arg Name<br>`Default Value` | Description<br>`Type` |
+| Name<br>`Default` | Description<br>`Type` |
 | --------------------------- | --------------------- |
 | start<br>`'F+G+G'` | The initial string or axiom of the L-system. Level 0.<br>`str`
 | rules<br>`'F F+G-F-G+F G GG'` | Dictionary that maps characters to what they are replaced with in the L-system expansion step. May also be a string where whitespace separated pairs of substrings correspond to the character and its replacement. For example `{'A': 'AB', 'B': 'B+A'}` and `'A AB B B+A'` represent the same rules.<br>`Dict[str, str] \| str`
@@ -139,7 +139,7 @@ Returns a 2-tuple of the final L-system string and the turtle graphics Turtle ob
 
 ### Customization Arguments
 
-| Arg Name<br>`Default Value` | Description<br>`Type` |
+| Name<br>`Default` | Description<br>`Type` |
 | --------------------------- | --------------------- |
 | colors<br>`None` | When an iterable such as a list, `color` and `fill_color` are ignored and the first 10 colors of the list become the colors that are selected on `0` through `9`. Each may be a 0-255 rgb tuple or None for no color. The list of defaults below is used to fill out anything missing if less than 10 colors are given. When `colors` is None, `color` and `fill_color` are used replace slots 0 and 1 respectively.<br>`Iterable[Tuple[int, int, int] \| None] \| None`
 | position<br>`(0, 0)` | The initial (x, y) position of the turtle.<br>`Tuple[float, float]`
@@ -165,7 +165,7 @@ Returns a 2-tuple of the final L-system string and the turtle graphics Turtle ob
 
 ### Turtle Arguments
 
-| Arg Name<br>`Default Value` | Description<br>`Type` |
+| Name<br>`Default` | Description<br>`Type` |
 | --------------------------- | --------------------- |
 | speed<br>`'fastest'` | The speed of the turtle. An integer from 1 to 10 for slowest to fastest or 0 for the fastest possible. Strings 'slowest', 'slow', 'normal', 'fast', and 'fastest' correspond to 1, 3, 6, 10, and 0 respectively.<br>`int \| str`
 | show_turtle<br>`False` | Whether the turtle is shown or not.<br>`bool`
@@ -174,7 +174,7 @@ Returns a 2-tuple of the final L-system string and the turtle graphics Turtle ob
 
 ### Increment Arguments
 
-| Arg Name<br>`Default Value` | Description<br>`Type` |
+| Name<br>`Default` | Description<br>`Type` |
 | --------------------------- | --------------------- |
 | angle_increment<br>`15` | The amount to increment or decrement `angle` by on `)` or `(`.<br>`float`
 | length_increment<br>`5` | The amount to increment or decrement `length` by on `^` or `%`.<br>`float`
@@ -186,7 +186,7 @@ Returns a 2-tuple of the final L-system string and the turtle graphics Turtle ob
 
 ### Text Arguments
 
-| Arg Name<br>`Default Value` | Description<br>`Type` |
+| Name<br>`Default` | Description<br>`Type` |
 | --------------------------- | --------------------- |
 | text<br>`None` | A string of text to add to the canvas. Patters are drawn on top of it. None for no text.<br>`str \| None`
 | text_color<br>`(255, 255, 255)` | The color of the text. A 0-255 rgb tuple or None to hide the text.<br>`Tuple[int, int, int] \| None`
@@ -198,7 +198,7 @@ Returns a 2-tuple of the final L-system string and the turtle graphics Turtle ob
 
 ### Png and Gif Frame Arguments
 
-| Arg Name<br>`Default Value` | Description<br>`Type` |
+| Name<br>`Default` | Description<br>`Type` |
 | --------------------------- | --------------------- |
 | png<br>`None` | The file path of where to save the final drawing as a png image, or None for no png output. A file extension is not required.<br>`str \| None`
 | padding<br>`10` | The amount of padding in pixels to frame the drawing with on all sides in png and gif output. Negative values are valid. When None, no padding happens and the entire canvas area is saved. Note that padding very large blank areas can be slow.<br>`int \| None`
@@ -208,7 +208,7 @@ Returns a 2-tuple of the final L-system string and the turtle graphics Turtle ob
 
 ### Gif Arguments
 
-| Arg Name<br>`Default Value` | Description<br>`Type` |
+| Name<br>`Default` | Description<br>`Type` |
 | --------------------------- | --------------------- |
 | gif<br>`None` | The file path of where to save the drawing as a gif animation, or None for no gif output. A file extension is not required.<br>`str \| None`
 | frame_every<br>`1` | When an integer, this is the number of "draw" operations to wait for between recording of gif frames. A "draw" operation is something that draws to the canvas, namely lines from uppercase letters, dots from `@`, and finished polygons from `}`. When a collection such as a string, frames are recorded whenever L-system characters in the collections are encountered.<br>`int \| Collection[str]`
@@ -223,7 +223,7 @@ Returns a 2-tuple of the final L-system string and the turtle graphics Turtle ob
 
 ### Advanced Arguments
 
-| Arg Name<br>`Default Value` | Description<br>`Type` |
+| Name<br>`Default` | Description<br>`Type` |
 | --------------------------- | --------------------- |
 | tmpdir<br>`None` | The path to a directory to put all .eps and .png files in during the generation of png and gif output. Useful if you need the gif frames as pngs. When None these files are put in a temporary place and deleted.<br>`str \| None`
 | callback<br>`None` | When not None, a function that is called for every character in the L-system string the turtle encounters. Two arguments are given, the current character and the Turtle object. If True is returned the turtle stops.<br>`Callable[[str, turtle.Turtle], bool \| None] \| None`
@@ -236,7 +236,7 @@ If used it should only be called once and be placed after all calls to `draw`.
 
 Returns nothing.
 
-| Arg Name<br>`Default Value` | Description<br>`Type` |
+| Name<br>`Default` | Description<br>`Type` |
 | --------------------------- | --------------------- |
 | exit_on_click<br>`True` | Whether the window can be closed by clicking anywhere.<br>`bool`
 | skip_init<br>`False` | For advanced use. Whether to skip calling `init` when it hasn't been called already.<br>`bool`
@@ -297,8 +297,99 @@ Many of the instructions are based on [Paul Bourke's 1991 *L-System User Notes*]
 
 # Examples
 
+The `draw(...)` line of code in each example should be used as the middle line here:
 
+```py
+from TurtLSystems import draw, wait
+draw(...)
+wait()
+```
 
+## Sierpinski Triangle
+
+```py
+draw('F+G+G', 'F F+G-F-G+F G GG', 5, 120, 10, color=(255, 255, 0), asap=True, png='sierpinski')
+```
+
+[![Sierpinski triangle example][sierpinski]][sierpinski]
+
+## Sierpinski Arrowhead Curve
+
+```py
+draw('A', 'A B-A-B B A+B+A', 5, 60, 10, color=(255, 0, 0), asap=True, heading=60, png='arrowhead')
+```
+
+[![Sierpinski arrowhead curve example][arrowhead]][arrowhead]
+
+## Koch Snowflake
+
+```py
+draw('F--F--F', 'F F+F--F+F', 5, 60, 1.5, color=(0, 128, 255), asap=True, heading=60, png='koch')
+```
+
+[![Koch snowflake example][koch]][koch]
+
+## Koch Anti-Snowflake
+
+```py
+draw('F++F++F', 'F F+F--F+F', 5, 60, 1.5, color=(0, 0, 255), asap=True, png='antikoch')
+```
+
+[![Koch anti-snowflake example][antikoch]][antikoch]
+
+## Square Koch Curve
+
+```py
+draw('F', 'F F+F-F-F+F', 5, 90, 3, color=(0, 255, 255), asap=True, png='squarekoch')
+```
+
+[![Square Koch curve example][squarekoch]][squarekoch]
+
+## Dragon Curve
+
+```py
+draw('F', 'F F+G G F-G', 12, 90, 5, color=(255, 0, 255), asap=True, png='dragon')
+```
+
+[![Dragon curve example][dragon]][dragon]
+
+## Fractal Tree
+
+```py
+draw('A', 'A B[-A]+A B BB', 7, 45, 3, color=(255, 128, 0), asap=True, heading=90, png='tree')
+```
+
+[![Fractal tree example][tree]][tree]
+
+# Fractal Plant
+
+```py
+draw('X', 'X F+[[X]-X]-F[-FX]+X F FF', 5, 20, 5, color=(0, 255, 0), asap=True, heading=88, png='plant')
+```
+
+[![Fractal plant example][plant]][plant]
+
+---
+
+Generalized versions of all the examples above and more are available in
+[examples.py][expy] which can be imported and run with:
+
+```py
+from TurtLSystems.examples import *
+sierpinski_triangle()
+# sierpinski_arrowhead()
+# square_koch_curve()
+# koch_snowflake()
+# koch_snowflake(anti=True)
+# dragon_curve()
+# cantor_set()
+# tree()
+# plant()
+# gradient()
+```
+
+Simply uncomment the desired examples and run the file.
+The exact examples present in this readme can be found all in one place [here][rexpy].
 
 # Links
 
@@ -308,7 +399,7 @@ Many of the instructions are based on [Paul Bourke's 1991 *L-System User Notes*]
 
 [TurtLSystems License][license]
 
-[L-Systems][wiki]
+[L-Systems Wikipedia][wiki]
 
 [Ghostscript][gs]
 
@@ -331,12 +422,12 @@ Many of the instructions are based on [Paul Bourke's 1991 *L-System User Notes*]
 [links]: https://github.com/discretegames/TurtLSystems#links
 [ex]: https://github.com/discretegames/TurtLSystems#examples
 [inst]: https://github.com/discretegames/TurtLSystems#l-system-instructions
-[arrowhead]: https://en.wikipedia.org/wiki/Sierpi%C5%84ski_curve#Arrowhead_curve
 [py]: https://www.python.org/downloads/
 [paul]: http://paulbourke.net/fractals/lsys
 [license]: https://github.com/discretegames/TurtLSystems/blob/main/LICENSE.txt
 [pillow]: https://pypi.org/project/Pillow/
 [pillowdoc]: https://pillow.readthedocs.io/en/stable/
+[arrowheadwiki]: https://en.wikipedia.org/wiki/Sierpi%C5%84ski_curve#Arrowhead_curve
 
 [example]: https://raw.githubusercontent.com/discretegames/TurtLSystems/main/examples/example.gif
 [sierpinski]: https://raw.githubusercontent.com/discretegames/TurtLSystems/main/examples/sierpinski.png
@@ -344,6 +435,8 @@ Many of the instructions are based on [Paul Bourke's 1991 *L-System User Notes*]
 [koch]: https://raw.githubusercontent.com/discretegames/TurtLSystems/main/examples/koch.png
 [antikoch]: https://raw.githubusercontent.com/discretegames/TurtLSystems/main/examples/antikoch.png
 [squarekoch]: https://raw.githubusercontent.com/discretegames/TurtLSystems/main/examples/squarekoch.png
-[dragon]: https://raw.githubusercontent.com/discretegames/TurtLSystems/main/examples/dragopn.png
+[dragon]: https://raw.githubusercontent.com/discretegames/TurtLSystems/main/examples/dragon.png
 [tree]: https://raw.githubusercontent.com/discretegames/TurtLSystems/main/examples/tree.png
 [plant]: https://raw.githubusercontent.com/discretegames/TurtLSystems/main/examples/plant.png
+[expy]: https://github.com/discretegames/TurtLSystems/blob/main/src/TurtLSystems/examples.py
+[rexpy]: https://github.com/discretegames/TurtLSystems/blob/main/examples/readme_examples.py
