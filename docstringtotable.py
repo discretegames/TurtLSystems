@@ -3,6 +3,7 @@
 
 import re
 import pyperclip
+
 pattern = r'- `(.*?)=(.*?)` \((.*?)\):(.*?)(?=\Z|^        -)'
 
 args = pyperclip.paste()

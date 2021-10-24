@@ -301,13 +301,13 @@ Coming soon.
 
 # Links
 
-[TurtLSystems Examples][ex]
-
 [TurtLSystems PyPI Package Page][pypi]
 
 [TurtLSystems GitHub Repo][gh]
 
 [TurtLSystems License][license]
+
+[L-Systems][wiki]
 
 [Ghostscript][gs]
 
