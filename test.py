@@ -23,7 +23,7 @@ run('venv/Scripts/python -m coverage html', check=False)
 run('cmd /c start htmlcov/index.html', check=False)
 print('COVERAGE DONE')
 
-
-print('Running Tox...')
-run('venv/Scripts/python -m tox', check=False)
-print('TOX DONE')
+if input('Run tox too? y/n ') == 'y':
+    print('Running Tox...')
+    run('venv/Scripts/python -m tox', check=False)
+    print('TOX DONE')

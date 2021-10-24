@@ -1,6 +1,6 @@
 <!-- markdownlint-disable-next-line MD041 -->
 [![Python version support](https://img.shields.io/pypi/pyversions/TurtLSystems)](https://www.python.org/downloads/)
-[![Test Coverage](https://raw.githubusercontent.com/discretegames/TurtLSystems/main/coverage.svg)](https://github.com/discretegames/TurtLSystems/blob/main/coverage.txt)
+<!-- [![Test Coverage](https://raw.githubusercontent.com/discretegames/TurtLSystems/main/coverage.svg)](https://github.com/discretegames/TurtLSystems/blob/main/coverage.txt) -->
 
 <!-- markdownlint-disable MD033 -->
 # **[TurtLSystems][pypi]**

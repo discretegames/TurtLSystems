@@ -22,7 +22,7 @@ repos:
         args:
           - --max-line-length=120
           - --ignored-modules=turtle,tkinter
-          - --disable=invalid-name,too-many-arguments,too-many-locals,global-statement,too-many-lines,too-many-branches,too-many-statements,import-error
+          - --disable=invalid-name,too-many-arguments,too-many-locals,global-statement,too-many-lines,too-many-branches,too-many-statements,import-error,fixme
 
   - repo: https://github.com/PyCQA/flake8
     rev: 4.0.1
