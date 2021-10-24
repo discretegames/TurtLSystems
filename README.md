@@ -179,10 +179,10 @@ Returns a 2-tuple of the final L-system string and the turtle graphics Turtle ob
 | angle_increment<br>`15` | The amount to increment or decrement `angle` by on `)` or `(`.<br>`float`
 | length_increment<br>`5` | The amount to increment or decrement `length` by on `^` or `%`.<br>`float`
 | length_scalar<br>`2` | The amount to multiply or divide `length` by on `*` or `/`.<br>`float`
-| thickness_increment<br>`1` | The amount to increment or decrement the `thickness` by on `>` or `<`. Won't go below 0.<br>`float`
-| red_increment<br>`1` | The amount to increment or decrement the red channel of the line or fill color by on `,` or `.`.<br>`int`
-| green_increment<br>`1` | The amount to increment or decrement the green channel of the line or fill color by on `;` or `:`.<br>`int`
-| blue_increment<br>`1` | The amount to increment or decrement the blue channel of the line or fill color by on `?` or `!`.<br>`int`
+| thickness_increment<br>`1` | The amount to increment or decrement the `thickness` by on `>` or `<`. Thickness won't go below 0.<br>`float`
+| red_increment<br>`1` | The amount to increment or decrement the red channel of the line or fill color by on `,` or `.`. Channel will stay in the range [0, 255]. This can be a float to allow for gradual changes.<br>`float`
+| green_increment<br>`1` | The amount to increment or decrement the green channel of the line or fill color by on `;` or `:`. Channel will stay in the range [0, 255]. This can be a float to allow for gradual changes.<br>`float`
+| blue_increment<br>`1` | The amount to increment or decrement the blue channel of the line or fill color by on `?` or `!`. Channel will stay in the range [0, 255]. This can be a float to allow for gradual changes.<br>`float`
 
 ### Text Arguments
 

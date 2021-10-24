@@ -8,17 +8,7 @@ from pathlib import Path
 from shutil import copyfile
 from string import digits
 from tempfile import TemporaryDirectory
-from typing import Any
-from typing import Callable
-from typing import cast
-from typing import Collection
-from typing import Dict
-from typing import Iterable
-from typing import List
-from typing import Optional
-from typing import Sequence
-from typing import Tuple
-from typing import Union
+from typing import Any, Callable, cast, Collection, Dict, Iterable, List, Optional, Sequence, Tuple, Union
 
 from packaging import version
 from PIL import Image
@@ -64,8 +54,8 @@ class State:  # pylint: disable=too-many-instance-attributes,too-few-public-meth
         heading: float, angle: float,
         length: float,
         thickness: float,
-        pen_color: OpColor,
-        fill_color: OpColor,
+        pen_color: Optional[Tuple[float, float, float]],
+        fill_color: Optional[Tuple[float, float, float]],
         swap_signs: bool,
         swap_cases: bool,
         modify_fill: bool
@@ -195,9 +185,9 @@ def draw(
     length_increment: float = 5,
     length_scalar: float = 2,
     thickness_increment: float = 1,
-    red_increment: int = 1,
-    green_increment: int = 1,
-    blue_increment: int = 1,
+    red_increment: float = 1,
+    green_increment: float = 1,
+    blue_increment: float = 1,
     # Text args:
     text: Optional[str] = None,
     text_color: Optional[Tuple[int, int, int]] = (255, 255, 255),
@@ -322,13 +312,16 @@ def draw(
         - `length_scalar=2` (float):
             The amount to multiply or divide `length` by on `*` or `/`.
         - `thickness_increment=1` (float):
-            The amount to increment or decrement the `thickness` by on `>` or `<`. Won't go below 0.
-        - `red_increment=1` (int):
+            The amount to increment or decrement the `thickness` by on `>` or `<`. Thickness won't go below 0.
+        - `red_increment=1` (float):
             The amount to increment or decrement the red channel of the line or fill color by on `,` or `.`.
-        - `green_increment=1` (int):
+            Channel will stay in the range [0, 255]. This can be a float to allow for gradual changes.
+        - `green_increment=1` (float):
             The amount to increment or decrement the green channel of the line or fill color by on `;` or `:`.
-        - `blue_increment=1` (int):
+            Channel will stay in the range [0, 255]. This can be a float to allow for gradual changes.
+        - `blue_increment=1` (float):
             The amount to increment or decrement the blue channel of the line or fill color by on `?` or `!`.
+            Channel will stay in the range [0, 255]. This can be a float to allow for gradual changes.
 
     Text args:
         - `text=None` (str | None):
@@ -534,7 +527,8 @@ def draw(
                               frame_every=frame_every,
                               max_frames=max_frames,
                               drawdir=drawdir if gif else None,
-                              callback=callback)
+                              callback=callback
+                              )
 
         if png:
             eps = str((drawdir / FINAL_NAME).with_suffix(EPS_EXT))
@@ -651,7 +645,7 @@ def message(*args: Any, **kwargs: Any) -> None:
         print(*args, **kwargs)
 
 
-def clamp(value: int, minimum: int = 0, maximum: int = 255) -> int:
+def clamp(value: float, minimum: int = 0, maximum: int = 255) -> float:
     """Clamps `value` between `minimum` and `maximum`."""
     return max(minimum, min(value, maximum))
 
@@ -659,7 +653,7 @@ def clamp(value: int, minimum: int = 0, maximum: int = 255) -> int:
 def conform_color(color: Optional[Sequence[float]]) -> OpColor:
     """Ensures `color` is a tuple with 0-255 clamped rgb."""
     if color:
-        return clamp(int(color[0])), clamp(int(color[1])), clamp(int(color[2]))
+        return round(clamp(color[0])), round(clamp(color[1])), round(clamp(color[2]))
     return None
 
 
@@ -889,7 +883,7 @@ def run(
     length_increment: float,
     length_scalar: float,
     thickness_increment: float,
-    color_increments: Tuple[int, int, int],
+    color_increments: Tuple[float, float, float],
     max_chars: Optional[int],
     max_draws: Optional[int],
     gif: Optional[str],
@@ -901,7 +895,8 @@ def run(
     """Run turtle `t` on L-system string `string` with given options."""
     initial_angle, initial_length, initial_thickness = angle, length, thickness
     swap_signs, swap_cases, modify_fill = False, False, False
-    pen_color, fill_color = colors[0], colors[1]
+    pen_color: Optional[Tuple[float, float, float]] = colors[0]
+    fill_color: Optional[Tuple[float, float, float]] = colors[1]
     stack: List[State] = []
     eps_paths: List[str] = []
     size = (1, 1)
@@ -925,17 +920,17 @@ def run(
     def set_pensize() -> None:
         t.pensize(max(0, thickness))  # type: ignore
 
-    def set_color(color: OpColor) -> None:
+    def set_color(color: Optional[Tuple[float, float, float]]) -> None:
         nonlocal pen_color, fill_color, modify_fill
         if modify_fill:
             modify_fill = False
             fill_color = color
             if fill_color:
-                t.fillcolor(fill_color)
+                t.fillcolor(cast(Color, conform_color(fill_color)))
         else:
             pen_color = color
             if pen_color:
-                t.pencolor(pen_color)
+                t.pencolor(cast(Color, conform_color(pen_color)))
 
     def increment_color(channel: int, decrement: bool = False) -> None:
         color = fill_color if modify_fill else pen_color
@@ -947,9 +942,9 @@ def run(
 
     set_pensize()
     if pen_color:
-        t.pencolor(pen_color)
+        t.pencolor(cast(Color, conform_color(pen_color)))
     if fill_color:
-        t.fillcolor(fill_color)
+        t.fillcolor(cast(Color, conform_color(fill_color)))
     if gif:
         save_frame()
 
@@ -1010,17 +1005,17 @@ def run(
             set_color(colors[int(c)])
         elif c == '#':
             modify_fill = True
-        elif c == '.':
-            increment_color(0)
         elif c == ',':
+            increment_color(0)
+        elif c == '.':
             increment_color(0, True)
-        elif c == ':':
-            increment_color(1)
         elif c == ';':
+            increment_color(1)
+        elif c == ':':
             increment_color(1, True)
-        elif c == '!':
-            increment_color(2)
         elif c == '?':
+            increment_color(2)
+        elif c == '!':
             increment_color(2, True)
         # Other:
         elif c == '{':
