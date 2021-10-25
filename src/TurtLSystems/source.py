@@ -436,7 +436,7 @@ def draw(
                     colors=colors, position=position, heading=heading, scale=scale, output_scale=output_scale,
                     prefix=prefix, suffix=suffix, max_chars=max_chars, speed=speed, show_turtle=show_turtle,
                     turtle_shape=turtle_shape, circle=circle, angle_increment=angle_increment,
-                    length_increment=length_increment, length_scalar=length_scalar,
+                    length_increment=length_increment, length_scalar=length_scalar, callback=callback,
                     thickness_increment=thickness_increment, red_increment=red_increment,
                     green_increment=green_increment, blue_increment=blue_increment, text=text,
                     text_color=text_color, text_position=text_position, font=font, font_size=font_size,
