@@ -10,12 +10,22 @@
 [TurtLSystems][pypi] is a Python 3 package for drawing [L-systems][wiki] via [turtle graphics][turtle]
 with easy ways to output png images and gif animations of the patterns generated.
 L-systems or Lindenmayer systems are a simple string rewriting systems where every character in an initial start
-string is repeatedly overwritten with a predetermined replacement. This can lead to very elaborate patterns that mimic
-nature or create fractals.
+string is repeatedly overwritten with a predetermined replacement. This can lead to very elaborate patterns that
+create fractals or mimic nature.
 
 [![Sierpinski arrowhead curve example gif][example]][example]
 
 [See more examples below.][ex]
+
+## Quick Start
+
+Do `pip install TurtLSystems` then run the following Python to draw a Sierpinski triangle:
+
+```py
+from TurtLSystems import *
+draw()
+wait()
+```
 
 <!-- markdownlint-disable-next-line MD025 -->
 # Installation (supports Python 3.6+)
